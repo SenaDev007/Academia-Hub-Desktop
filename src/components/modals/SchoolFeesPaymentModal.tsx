@@ -37,6 +37,8 @@ const SchoolFeesPaymentModal: React.FC<SchoolFeesPaymentModalProps> = ({
   const [amountGiven, setAmountGiven] = useState(0);
   const [change, setChange] = useState(0);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [schoolWhatsAppNumber, setSchoolWhatsAppNumber] = useState('');
+  const [savedSchoolWhatsAppNumber, setSavedSchoolWhatsAppNumber] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
@@ -44,6 +46,15 @@ const SchoolFeesPaymentModal: React.FC<SchoolFeesPaymentModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Charger le numéro WhatsApp de l'école sauvegardé
+  React.useEffect(() => {
+    const savedNumber = localStorage.getItem('schoolWhatsAppNumber');
+    if (savedNumber) {
+      setSchoolWhatsAppNumber(savedNumber);
+      setSavedSchoolWhatsAppNumber(savedNumber);
+    }
+  }, []);
 
   // Mock students data
   const allStudents = [
@@ -54,7 +65,7 @@ const SchoolFeesPaymentModal: React.FC<SchoolFeesPaymentModalProps> = ({
       matricule: 'MAT-2024-00001',
       dateOfBirth: '15/03/2009',
       parentName: 'Jean Dubois',
-      parentPhone: '06 12 34 56 78',
+      parentPhone: '0195722234',
       address: '123 Rue de la Paix, 75001 Paris',
       schoolYear: '2023-2024',
       status: 'Actif',
@@ -148,6 +159,39 @@ const SchoolFeesPaymentModal: React.FC<SchoolFeesPaymentModalProps> = ({
       // Simulate successful payment
       setIsSuccess(true);
       
+      // Ouvrir WhatsApp avec le message pré-rempli
+      if (selectedStudent && selectedStudent.parentPhone) {
+        const message = `
+📧 REÇU DE PAIEMENT - École Exemple
+
+👤 Élève: ${selectedStudent.name}
+🏫 Classe: ${selectedStudent.class}
+📋 N° Educmaster: ${selectedStudent.matricule}
+
+💰 DÉTAILS DU PAIEMENT:
+• N° Reçu: ${receiptNumber}
+• Date: ${paymentDate} à ${paymentTime}
+• Montant: ${formatAmount(paymentAmount)} F CFA
+${reduction > 0 ? `• Réduction: ${formatAmount(reduction)} F CFA` : ''}
+• Montant net: ${formatAmount(paymentAmount - reduction)} F CFA
+• Méthode: ${paymentMethod === 'mobile_money' ? 'Mobile Money' : paymentMethod === 'card' ? 'Carte bancaire' : 'Espèces'}
+${paymentReference ? `• Référence: ${paymentReference}` : ''}
+
+💳 BILAN APRÈS PAIEMENT:
+• Total attendu: ${formatAmount(selectedStudent.totalExpected)} F CFA
+• Total versé: ${formatAmount(selectedStudent.totalPaid + (paymentAmount - reduction))} F CFA
+• Restant à payer: ${formatAmount(selectedStudent.totalRemaining - (paymentAmount - reduction))} F CFA
+
+📞 Contact école: ${schoolWhatsAppNumber || '01 23 45 67 89'}
+📧 Email: contact@ecole-exemple.fr
+
+Merci pour votre confiance ! 🙏
+`.trim();
+        
+        const whatsappLink = `https://wa.me/${selectedStudent.parentPhone.replace(/\s+/g, '')}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappLink, '_blank');
+      }
+
       // Wait a bit before closing the modal
       setTimeout(() => {
         onSuccess();
@@ -232,6 +276,23 @@ Merci pour votre confiance ! 🙏
   };
 
   const sendWhatsApp = async (phoneNumber: string, message: string) => {
+    // Si le numéro WhatsApp de l'école n'est pas défini, utiliser le numéro de l'école par défaut
+    const schoolNumber = schoolWhatsAppNumber || '01 23 45 67 89';
+    
+    // Construire le lien WhatsApp avec le numéro du parent et le message
+    const whatsappLink = `https://wa.me/${phoneNumber.replace(/\s+/g, '')}?text=${encodeURIComponent(message)}`;
+    
+    // Ouvrir le lien WhatsApp dans une nouvelle fenêtre
+    window.open(whatsappLink, '_blank');
+    
+    // Sauvegarder le numéro WhatsApp de l'école si nécessaire
+    if (schoolWhatsAppNumber && schoolWhatsAppNumber !== savedSchoolWhatsAppNumber) {
+      setSavedSchoolWhatsAppNumber(schoolWhatsAppNumber);
+      // Ici vous pouvez ajouter une fonction pour sauvegarder le numéro dans le localStorage ou une base de données
+      localStorage.setItem('schoolWhatsAppNumber', schoolWhatsAppNumber);
+    }
+    
+    return { success: true };
     // Dans une vraie implémentation, vous utiliseriez l'API WhatsApp Business
     // Exemple avec WhatsApp Business API
     const whatsappData = {
@@ -381,6 +442,33 @@ Merci pour votre confiance ! 🙏
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Configuration WhatsApp */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 mb-6">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <Phone className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
+              Configuration WhatsApp
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <Phone className="inline-block w-4 h-4 mr-2" />
+                  Numéro WhatsApp de l'école
+                </label>
+                <input
+                  type="tel"
+                  value={schoolWhatsAppNumber}
+                  onChange={(e) => setSchoolWhatsAppNumber(e.target.value)}
+                  placeholder="Ex: 01 23 45 67 89"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Le numéro WhatsApp de l'école sera utilisé pour envoyer les messages aux parents.
+                  Il sera sauvegardé pour les prochaines utilisations.
+                </p>
               </div>
             </div>
           </div>

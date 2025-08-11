@@ -189,12 +189,27 @@ CREATE TABLE documents (
 - [ ] Structure projet backend
 - [ ] Variables d'environnement
 
-### Phase 2: Authentification (Jours 4-6)
-- [ ] JWT authentication
-- [ ] Middleware multi-tenant
-- [ ] Gestion des rôles
-- [ ] Validation des données
-- [ ] Rate limiting
+### Phase 2: Authentification (Jours 4-6) ✅
+- [x] JWT authentication
+  - Tests unitaires : ✅ Authentification, enregistrement, gestion des tokens
+  - Tests d'intégration : ✅ Routes d'authentification, flux utilisateur
+- [x] Middleware multi-tenant
+  - Tests de validation du sous-domaine
+  - Tests de validation du statut
+  - Tests d'injection du schoolId
+- [x] Gestion des rôles
+  - Tests de validation des rôles
+  - Tests de contrôle d'accès
+- [x] Validation des données
+  - Tests de format email
+  - Tests de force du mot de passe
+  - Tests de champs requis
+  - Tests de validation des rôles
+  - Tests d'unicité des sous-domaines
+- [x] Rate limiting
+  - Tests de limite de requêtes
+  - Tests de réinitialisation
+  - Tests de comportement en dépassement
 
 ### Phase 3: CRUD Core (Jours 7-12)
 - [ ] Routes écoles

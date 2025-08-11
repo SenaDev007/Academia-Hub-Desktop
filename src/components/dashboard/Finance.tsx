@@ -35,7 +35,8 @@ import {
   PayrollSettingsModal,
   ConfirmModal,
   AlertModal,
-  PaymentModal
+  PaymentModal,
+  ReceiptModal
 } from '../modals';
 import PayrollManagement from './PayrollManagement';
 
@@ -86,6 +87,10 @@ const Finance: React.FC = () => {
 
   // État pour l'année scolaire sélectionnée
   const [selectedSchoolYear, setSelectedSchoolYear] = useState('2024-2025');
+
+  // État pour la modal de reçu
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
 
   // Données de frais par année scolaire (simulation)
   const feesByYear = {
@@ -143,6 +148,80 @@ const Finance: React.FC = () => {
       trend: 'up',
       icon: CheckCircle,
       color: 'from-purple-600 to-purple-700'
+    }
+  ];
+
+  // Données pour les frais d'examen
+  const examFees = [
+    {
+      id: 'EXM-2024-00001',
+      studentName: 'Marie Dubois',
+      class: '3ème A',
+      examType: 'Brevet blanc',
+      amount: 890,
+      date: '2024-01-15',
+      method: 'Carte bancaire',
+      status: 'completed',
+      type: 'Frais d\'examen'
+    },
+    {
+      id: 'EXM-2024-00002',
+      studentName: 'Pierre Martin',
+      class: '2nde B',
+      examType: 'Brevet blanc',
+      amount: 890,
+      date: '2024-01-14',
+      method: 'Mobile Money',
+      status: 'completed',
+      type: 'Frais d\'examen'
+    },
+    {
+      id: 'EXM-2024-00003',
+      studentName: 'Sophie Lambert',
+      class: '1ère C',
+      examType: 'Brevet blanc',
+      amount: 890,
+      date: '2024-01-13',
+      method: 'Virement bancaire',
+      status: 'pending',
+      type: 'Frais d\'examen'
+    }
+  ];
+
+  // Données pour les frais de cantine
+  const canteenFees = [
+    {
+      id: 'CAN-2024-00001',
+      studentName: 'Marie Dubois',
+      class: '3ème A',
+      mealType: 'Repas complet',
+      amount: 320,
+      date: '2024-01-15',
+      method: 'Carte bancaire',
+      status: 'completed',
+      type: 'Frais de cantine'
+    },
+    {
+      id: 'CAN-2024-00002',
+      studentName: 'Pierre Martin',
+      class: '2nde B',
+      mealType: 'Demi-pension',
+      amount: 240,
+      date: '2024-01-14',
+      method: 'Mobile Money',
+      status: 'completed',
+      type: 'Frais de cantine'
+    },
+    {
+      id: 'CAN-2024-00003',
+      studentName: 'Sophie Lambert',
+      class: '1ère C',
+      mealType: 'Repas complet',
+      amount: 320,
+      date: '2024-01-13',
+      method: 'Virement bancaire',
+      status: 'pending',
+      type: 'Frais de cantine'
     }
   ];
 
@@ -552,6 +631,11 @@ const Finance: React.FC = () => {
     setIsAlertModalOpen(true);
   };
 
+  const handleViewReceipt = (payment: any) => {
+    setSelectedReceipt(payment);
+    setIsReceiptModalOpen(true);
+  };
+
   const confirmDelete = () => {
     console.log('Deleting item:', selectedItem);
     setIsConfirmModalOpen(false);
@@ -626,6 +710,8 @@ const Finance: React.FC = () => {
               { id: 'closing', label: 'Clôture journée', icon: Calculator },
               { id: 'treasury', label: 'Trésorerie', icon: Wallet },
               { id: 'reports', label: 'Rapports', icon: FileText },
+              { id: 'canteen', label: 'Frais de cantine', icon: Building },
+              { id: 'exams', label: 'Frais d\'examen', icon: FileText },
               { id: 'fee-config', label: 'Paramétrage frais', icon: Settings },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -794,6 +880,228 @@ const Finance: React.FC = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {recentPayments.map((payment) => (
+                      <tr key={payment.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          {payment.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{payment.studentName}</div>
+                            <div className="text-sm text-gray-500">{payment.class}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {payment.type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          €{payment.amount}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {payment.date}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {payment.method}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentStatusColor(payment.status)}`}>
+                            {payment.status === 'completed' ? 'Terminé' : 'En attente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button className="text-blue-600 hover:text-blue-900 mr-3">
+                            Reçu
+                          </button>
+                          <button 
+                            onClick={() => handleEditItem(payment, 'payment')}
+                            className="text-gray-600 hover:text-gray-900 mr-3"
+                          >
+                            Éditer
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteItem(payment, 'payment')}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'exams' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">Gestion des frais d'examen</h3>
+                <div className="flex space-x-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filtres
+                  </button>
+                  <button 
+                    onClick={handleNewInvoice}
+                    className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nouvel encaissement examen
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Reçu N°
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Élève
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type d'examen
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Montant
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Méthode
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {examFees.map((payment) => (
+                      <tr key={payment.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          {payment.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{payment.studentName}</div>
+                            <div className="text-sm text-gray-500">{payment.class}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {payment.type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          €{payment.amount}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {payment.date}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {payment.method}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentStatusColor(payment.status)}`}>
+                            {payment.status === 'completed' ? 'Terminé' : 'En attente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button className="text-blue-600 hover:text-blue-900 mr-3">
+                            Reçu
+                          </button>
+                          <button 
+                            onClick={() => handleEditItem(payment, 'payment')}
+                            className="text-gray-600 hover:text-gray-900 mr-3"
+                          >
+                            Éditer
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteItem(payment, 'payment')}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'canteen' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">Gestion des frais de cantine</h3>
+                <div className="flex space-x-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filtres
+                  </button>
+                  <button 
+                    onClick={handleNewInvoice}
+                    className="inline-flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nouvel encaissement cantine
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Reçu N°
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Élève
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type de repas
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Montant
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Méthode
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {canteenFees.map((payment) => (
                       <tr key={payment.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                           {payment.id}
@@ -1398,8 +1706,8 @@ const Finance: React.FC = () => {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSave={handleSavePayment}
-        paymentData={actionType === 'edit' ? selectedItem : undefined}
-        isEdit={actionType === 'edit'}
+        payment={selectedItem}
+        actionType={actionType}
         students={students}
       />
 
@@ -1407,51 +1715,74 @@ const Finance: React.FC = () => {
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         onSave={handleSaveInvoice}
-        invoiceData={actionType === 'edit' ? selectedItem : undefined}
-        isEdit={actionType === 'edit'}
+        invoice={selectedItem}
+        actionType={actionType}
         students={students}
-        feeTypes={feeTypes}
       />
 
       <ExpenseModal
         isOpen={isExpenseModalOpen}
         onClose={() => setIsExpenseModalOpen(false)}
         onSave={handleSaveExpense}
-        expenseData={actionType === 'edit' ? selectedItem : undefined}
-        isEdit={actionType === 'edit'}
+        expense={selectedItem}
+        actionType={actionType}
       />
 
       <FeeTypeModal
         isOpen={isFeeTypeModalOpen}
         onClose={() => setIsFeeTypeModalOpen(false)}
         onSave={handleSaveFeeType}
-        feeTypeData={actionType === 'edit' ? selectedItem : undefined}
-        isEdit={actionType === 'edit'}
-        educationLevels={educationLevels}
-        classes={classes}
-      />
-
-      <ClosingDayModal
-        isOpen={isClosingDayModalOpen}
-        onClose={() => setIsClosingDayModalOpen(false)}
-        onSave={handleSaveClosingDay}
-        closingData={dailyClosing}
-      />
-
-      <BudgetModal
-        isOpen={isBudgetModalOpen}
-        onClose={() => setIsBudgetModalOpen(false)}
-        onSave={handleSaveBudget}
-        budgetData={actionType === 'edit' ? selectedItem : undefined}
-        isEdit={actionType === 'edit'}
+        feeType={selectedItem}
+        actionType={actionType}
       />
 
       <FeeConfigurationModal
         isOpen={isFeeConfigurationModalOpen}
         onClose={() => setIsFeeConfigurationModalOpen(false)}
         onSave={handleSaveFeeConfiguration}
+        feeTypes={feeTypes}
+        feeLevels={feeLevels}
+        feesByYear={feesByYear}
+        selectedSchoolYear={selectedSchoolYear}
+        onSchoolYearChange={setSelectedSchoolYear}
       />
 
+      <ClosingDayModal
+        isOpen={isClosingDayModalOpen}
+        onClose={() => setIsClosingDayModalOpen(false)}
+        onSave={handleSaveClosingDay}
+        dailyClosing={dailyClosing}
+      />
+
+      <BudgetModal
+        isOpen={isBudgetModalOpen}
+        onClose={() => setIsBudgetModalOpen(false)}
+        onSave={handleSaveBudget}
+        budget={selectedItem}
+        actionType={actionType}
+      />
+
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        payment={selectedReceipt}
+      />
+
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Confirmer la suppression"
+        message="Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible."
+      />
+
+      <AlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        title={alertMessage.title}
+        message={alertMessage.message}
+        type={alertMessage.type}
+      />
       <PayrollModal
         isOpen={isPayrollModalOpen}
         onClose={() => setIsPayrollModalOpen(false)}

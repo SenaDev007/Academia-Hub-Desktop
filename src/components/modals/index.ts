@@ -48,3 +48,4 @@ export { default as RoomModal } from './RoomModal';
 export { default as SubjectModal } from './SubjectModal';
 export { default as BreakModal } from './BreakModal';
 export { default as CahierJournalModal } from './CahierJournalModal';
+export { default as ReceiptModal } from './ReceiptModal';
