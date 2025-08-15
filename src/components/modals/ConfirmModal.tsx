@@ -6,10 +6,11 @@ interface ConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  message?: string;
   type?: 'danger' | 'success' | 'info' | 'warning';
   confirmText?: string;
   cancelText?: string;
+  children?: React.ReactNode;
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -17,10 +18,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onClose,
   onConfirm,
   title,
-  message,
+  message = '',
   type = 'info',
   confirmText = 'Confirmer',
-  cancelText = 'Annuler'
+  cancelText = 'Annuler',
+  children
 }) => {
   if (!isOpen) return null;
 
@@ -58,7 +60,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           onClick={onClose}
         ></div>
 
-        {/* This element prevents the click from propagating to the overlay */}
         <div 
           className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl"
           onClick={(e) => e.stopPropagation()}
@@ -82,9 +83,15 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                 {title}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                {message}
-              </p>
+              
+              {/* Contenu personnalisé ou message par défaut */}
+              {children ? (
+                <div className="mb-6">{children}</div>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  {message}
+                </p>
+              )}
               
               <div className="flex space-x-3">
                 <button

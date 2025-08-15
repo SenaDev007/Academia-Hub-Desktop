@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   DollarSign, 
   CreditCard, 
@@ -19,7 +19,13 @@ import {
   Building,
   UserCheck,
   BarChart3,
-  Settings
+  Settings,
+  Eye,
+  Edit,
+  Trash2,
+  MoreVertical,
+  Send,
+  Printer
 } from 'lucide-react';
 import {
   InvoiceModal, 
@@ -39,6 +45,7 @@ import {
   ReceiptModal
 } from '../modals';
 import PayrollManagement from './PayrollManagement';
+import '../../styles/tooltips.css';
 
 const Finance: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -115,6 +122,9 @@ const Finance: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [actionType, setActionType] = useState<'delete' | 'edit' | ''>('');
+
+  // Ajouter cet état pour gérer la confirmation de suppression
+  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
 
   const financialStats = [
     {
@@ -469,6 +479,67 @@ const Finance: React.FC = () => {
     return 'text-red-600';
   };
 
+  // Fonction pour gérer l'édition d'un élément
+  const handleEditItem = (item: any, type: string) => {
+    if (type === 'payment') {
+      // Mettre à jour le paiement sélectionné et ouvrir le modal de paiement
+      setSelectedItem(item);
+      setIsPaymentModalOpen(true);
+    }
+  };
+
+  // Fonction pour gérer la suppression d'un élément
+  const handleDeleteItem = (payment: any) => {
+    // Créer un nouvel objet avec les propriétés renommées pour correspondre à ce que la modale attend
+    const paymentForModal = {
+      ...payment,
+      // Mapper les noms de propriétés pour correspondre à ce que la modale attend
+      className: payment.class || payment.className || 'Non spécifiée',
+      feeType: payment.type || payment.feeType || 'Non spécifié',
+      paymentMethod: payment.method || payment.paymentMethod || 'Non spécifiée'
+    };
+    
+    setPaymentToDelete(paymentForModal);
+    setIsConfirmModalOpen(true);
+  };
+
+  // Ajouter cette fonction pour confirmer la suppression
+  const confirmDelete = async () => {
+    if (!paymentToDelete) return;
+    
+    try {
+      // Ici, vous devriez appeler votre API pour supprimer le paiement
+      // await api.delete(`/api/payments/${paymentToDelete.id}`);
+      
+      // Afficher un message de succès
+      setAlertMessage({
+        title: 'Succès',
+        message: 'Le paiement a été supprimé avec succès.',
+        type: 'success'
+      });
+      
+      // Recharger les données ou mettre à jour l'état local
+      // loadPayments();
+      
+    } catch (error) {
+      setAlertMessage({
+        title: 'Erreur',
+        message: 'Une erreur est survenue lors de la suppression du paiement.',
+        type: 'error'
+      });
+    } finally {
+      setIsConfirmModalOpen(false);
+      setPaymentToDelete(null);
+      setIsAlertModalOpen(true);
+    }
+  };
+
+  // Fonction pour afficher le reçu
+  const handleShowReceipt = (payment: any) => {
+    setSelectedReceipt(payment);
+    setIsReceiptModalOpen(true);
+  };
+
   // Handlers pour les modals
   const handleNewPayment = () => {
     setSelectedItem(null);
@@ -506,59 +577,6 @@ const Finance: React.FC = () => {
   const handleSelectStudent = (student: any) => {
     setSelectedStudent(student);
     setStudentPaymentHistory(getStudentPaymentHistory(student.id));
-  };
-
-  const handleEditItem = (item: any, type: string) => {
-    setSelectedItem(item);
-    setActionType('edit');
-    
-    switch (type) {
-      case 'payment':
-        setIsPaymentModalOpen(true);
-        break;
-      case 'invoice':
-        setIsInvoiceModalOpen(true);
-        break;
-      case 'expense':
-        setIsExpenseModalOpen(true);
-        break;
-      case 'feeType':
-        setIsFeeTypeModalOpen(true);
-        break;
-      case 'budget':
-        setIsBudgetModalOpen(true);
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleDeleteItem = (item: any, type: string) => {
-    setSelectedItem(item);
-    setActionType('delete');
-    
-    // Set confirmation message based on type
-    let confirmMessage = '';
-    switch (type) {
-      case 'payment':
-        confirmMessage = `Êtes-vous sûr de vouloir supprimer le paiement ${item.id} ?`;
-        break;
-      case 'invoice':
-        confirmMessage = `Êtes-vous sûr de vouloir supprimer la facture ${item.id} ?`;
-        break;
-      case 'expense':
-        confirmMessage = `Êtes-vous sûr de vouloir supprimer la dépense ${item.id} ?`;
-        break;
-      default:
-        confirmMessage = 'Êtes-vous sûr de vouloir supprimer cet élément ?';
-        break;
-    }
-    
-    // Utiliser le message de confirmation
-    if (window.confirm(confirmMessage)) {
-      // Logique de suppression
-      console.log(`Suppression de ${type}:`, item);
-    }
   };
 
   const handleSavePayment = (paymentData: any) => {
@@ -636,19 +654,81 @@ const Finance: React.FC = () => {
     setIsReceiptModalOpen(true);
   };
 
-  const confirmDelete = () => {
-    console.log('Deleting item:', selectedItem);
-    setIsConfirmModalOpen(false);
-    setAlertMessage({
-      title: 'Élément supprimé',
-      message: 'L\'élément a été supprimé avec succès.',
-      type: 'success'
-    });
-    setIsAlertModalOpen(true);
+  const handleDownloadReceipt = (payment: any) => {
+    console.log('Téléchargement du reçu:', payment.id);
   };
+
+  const handleSendReceipt = async (payment: any, method: 'email' | 'sms' | 'whatsapp') => {
+    try {
+      console.log(`Envoi du reçu ${payment.id} par ${method}`);
+      
+      setAlertMessage({
+        title: 'Succès',
+        message: `Le reçu a été envoyé avec succès par ${method === 'email' ? 'email' : method === 'sms' ? 'SMS' : 'WhatsApp'}.`,
+        type: 'success'
+      });
+      setIsAlertModalOpen(true);
+    } catch (error) {
+      setAlertMessage({
+        title: 'Erreur',
+        message: `Une erreur est survenue lors de l'envoi du reçu.`,
+        type: 'error'
+      });
+      setIsAlertModalOpen(true);
+    }
+  };
+
+  const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showActionsMenu && !(event.target as Element).closest('.relative')) {
+        setShowActionsMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionsMenu]);
+
+  const tooltipStyle = `
+    [data-tooltip] {
+      position: relative;
+      cursor: pointer;
+    }
+    [data-tooltip]:before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 5px;
+      padding: 4px 8px;
+      background: #333;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    [data-tooltip]:hover:before {
+      opacity: 1;
+      visibility: visible;
+    }
+  `;
+
+  const GlobalStyles = () => (
+    <style jsx global>{tooltipStyle}</style>
+  );
 
   return (
     <div className="space-y-6">
+      <GlobalStyles />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -908,21 +988,29 @@ const Finance: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">
-                            Reçu
-                          </button>
-                          <button 
-                            onClick={() => handleEditItem(payment, 'payment')}
-                            className="text-gray-600 hover:text-gray-900 mr-3"
-                          >
-                            Éditer
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteItem(payment, 'payment')}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Supprimer
-                          </button>
+                          <div className="flex items-center space-x-1">
+                            <button 
+                              onClick={() => handleShowReceipt(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Voir le reçu"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleEditItem(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Modifier"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteItem(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1019,21 +1107,29 @@ const Finance: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">
-                            Reçu
-                          </button>
-                          <button 
-                            onClick={() => handleEditItem(payment, 'payment')}
-                            className="text-gray-600 hover:text-gray-900 mr-3"
-                          >
-                            Éditer
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteItem(payment, 'payment')}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Supprimer
-                          </button>
+                          <div className="flex items-center space-x-1">
+                            <button 
+                              onClick={() => handleShowReceipt(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Voir le reçu"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleEditItem(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Modifier"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteItem(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1130,21 +1226,29 @@ const Finance: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">
-                            Reçu
-                          </button>
-                          <button 
-                            onClick={() => handleEditItem(payment, 'payment')}
-                            className="text-gray-600 hover:text-gray-900 mr-3"
-                          >
-                            Éditer
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteItem(payment, 'payment')}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Supprimer
-                          </button>
+                          <div className="flex items-center space-x-1">
+                            <button 
+                              onClick={() => handleShowReceipt(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Voir le reçu"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleEditItem(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Modifier"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteItem(payment)}
+                              className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                              data-tooltip="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1196,7 +1300,7 @@ const Finance: React.FC = () => {
                       </div>
                       
                       <div className="flex flex-col space-y-2">
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                        <button className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm">
                           Contacter
                         </button>
                         <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
@@ -1259,7 +1363,7 @@ const Finance: React.FC = () => {
                           </button>
                         )}
                         <button 
-                          onClick={() => handleEditItem(expense, 'expense')}
+                          onClick={() => handleEditItem(expense)}
                           className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                         >
                           Éditer
@@ -1770,11 +1874,62 @@ const Finance: React.FC = () => {
 
       <ConfirmModal
         isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
+        onClose={() => {
+          setIsConfirmModalOpen(false);
+          setPaymentToDelete(null);
+        }}
         onConfirm={confirmDelete}
         title="Confirmer la suppression"
-        message="Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible."
-      />
+        type="danger"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">Voulez-vous vraiment supprimer ce paiement ?</p>
+          
+          <div className="bg-gray-50 p-4 rounded-md">
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Élève:</span>
+                <span>{paymentToDelete?.studentName || 'Non spécifié'}</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Classe:</span>
+                <span>{paymentToDelete?.className || 'Non spécifiée'}</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Type de frais:</span>
+                <span>{paymentToDelete?.feeType || 'Non spécifié'}</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Montant:</span>
+                <span>{paymentToDelete?.amount || '0'} FCFA</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Date:</span>
+                <span>{paymentToDelete?.date ? new Date(paymentToDelete.date).toLocaleDateString('fr-FR') : 'Non spécifiée'}</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Méthode:</span>
+                <span className="capitalize">{paymentToDelete?.paymentMethod || 'Non spécifiée'}</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-medium w-32 flex-shrink-0">• Statut:</span>
+                <span className={`capitalize ${
+                  paymentToDelete?.status === 'completed' ? 'text-green-600' : 
+                  paymentToDelete?.status === 'pending' ? 'text-yellow-600' : 
+                  paymentToDelete?.status === 'failed' ? 'text-red-600' : 'text-gray-600'
+                }`}>
+                  {paymentToDelete?.status === 'completed' ? 'Complété' : 
+                   paymentToDelete?.status === 'pending' ? 'En attente' : 
+                   paymentToDelete?.status === 'failed' ? 'Échoué' : 
+                   paymentToDelete?.status || 'Inconnu'}
+                </span>
+              </li>
+            </ul>
+          </div>
+          
+          <p className="text-red-600 text-sm">Cette action est irréversible.</p>
+        </div>
+      </ConfirmModal>
 
       <AlertModal
         isOpen={isAlertModalOpen}
@@ -1856,22 +2011,6 @@ const Finance: React.FC = () => {
           });
           setIsAlertModalOpen(true);
         }}
-      />
-      <ConfirmModal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
-        onConfirm={confirmDelete}
-        title="Confirmer la suppression"
-        message={`Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.`}
-        type="danger"
-      />
-
-      <AlertModal
-        isOpen={isAlertModalOpen}
-        onClose={() => setIsAlertModalOpen(false)}
-        title={alertMessage.title}
-        message={alertMessage.message}
-        type={alertMessage.type}
       />
     </div>
   );
