@@ -239,8 +239,23 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
     accountant: 'Mme Sophie MARTIN',
   }
 }) => {
-  // Ajouter un log pour déboguer les données reçues
-  console.log('Données reçues dans PDFReceipt:', { payment, schoolInfo });
+  // Log pour déboguer les données reçues
+  console.log('PDFReceipt - Données reçues:', JSON.parse(JSON.stringify(payment)));
+
+  // Créer un objet étudiant avec des valeurs par défaut
+  const student = {
+    name: payment?.studentName || 'Non spécifié',
+    class: payment?.class || 'Non affecté',
+    reference: payment?.reference || 'N/A',
+    parentName: payment?.parentName || 'Non spécifié',
+    parentPhone: payment?.parentPhone || 'Non spécifié',
+    address: payment?.address || 'Non spécifié',
+    dateOfBirth: payment?.dateOfBirth || 'Non spécifié',
+    schoolYear: payment?.schoolYear || `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+    status: payment?.status || 'Actif'
+  };
+
+  console.log('PDFReceipt - Données de l\'étudiant:', student);
 
   const formatDate = (dateString: string, includeTime = true) => {
     const options: Intl.DateTimeFormatOptions = { 
@@ -269,22 +284,6 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
       case 'partial': return 'Partiel';
       default: return status;
     }
-  };
-
-  const student = payment.studentData || {
-    id: payment.id || 'N/A',
-    name: payment.studentName || 'N/A',
-    class: payment.class || 'N/A',
-    matricule: payment.reference || 'N/A',
-    parentName: payment.parentName || 'Non spécifié',
-    parentPhone: payment.parentPhone || 'Non spécifié',
-    address: payment.address || 'Non spécifié',
-    dateOfBirth: payment.dateOfBirth || 'Non spécifié',
-    schoolYear: payment.schoolYear || `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-    totalExpected: payment.amount || 0,
-    totalPaid: payment.amount || 0,
-    totalRemaining: 0,
-    status: 'Actif'
   };
 
   const paymentItems = payment.items || [{
@@ -377,28 +376,28 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
               <Text style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 6, color: '#4b5563' }}>INFORMATIONS PERSONNELLES</Text>
               <View style={styles.row}>
                 <Text style={styles.label}>Nom complet:</Text>
-                <Text style={[styles.value, styles.bold]}>{student.name || 'Non spécifié'}</Text>
+                <Text style={[styles.value, styles.bold]}>{student.name}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Date de naissance:</Text>
                 <Text style={styles.value}>
-                  {!student.dateOfBirth || ['Non spécifié', 'N/A'].includes(student.dateOfBirth) 
+                  {!student.dateOfBirth || student.dateOfBirth === 'Non spécifié' 
                     ? 'Non spécifié' 
                     : new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}
                 </Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Parent/Tuteur:</Text>
-                <Text style={styles.value}>{student.parentName || 'Non spécifié'}</Text>
+                <Text style={styles.value}>{student.parentName}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Téléphone parent:</Text>
-                <Text style={styles.value}>{student.parentPhone || 'Non spécifié'}</Text>
+                <Text style={styles.value}>{student.parentPhone}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Adresse:</Text>
                 <Text style={[styles.value, { flex: 1 }]} wrap>
-                  {student.address || 'Non spécifié'}
+                  {student.address}
                 </Text>
               </View>
             </View>
@@ -408,17 +407,17 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
               <Text style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 6, color: '#4b5563' }}>INFORMATIONS ACADÉMIQUES</Text>
               <View style={styles.row}>
                 <Text style={styles.label}>N° Educmaster:</Text>
-                <Text style={[styles.value, styles.bold]}>{student.matricule || 'N/A'}</Text>
+                <Text style={[styles.value, styles.bold]}>{student.reference}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Classe:</Text>
                 <Text style={styles.value}>
-                  {!student.class || student.class === 'N/A' ? 'Non affecté' : student.class}
+                  {student.class === 'N/A' ? 'Non affecté' : student.class}
                 </Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Année scolaire:</Text>
-                <Text style={styles.value}>{student.schoolYear || '2023-2024'}</Text>
+                <Text style={styles.value}>{student.schoolYear}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Statut:</Text>
@@ -435,7 +434,7 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
                     fontWeight: 'bold',
                     textTransform: 'uppercase'
                   }}>
-                    {student.status || 'Inactif'}
+                    {student.status}
                   </Text>
                 </View>
               </View>
@@ -512,12 +511,12 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
           <View style={{ backgroundColor: '#f8fafc', padding: 12, borderRadius: 4, marginTop: 8 }}>
             <View style={[styles.amountRow, { marginBottom: 4 }]}>
               <Text style={[styles.amountLabel, styles.bold]}>Total des frais de scolarité:</Text>
-              <Text style={[styles.amountValue, styles.bold]}>{formatCurrency(student.totalExpected)}</Text>
+              <Text style={[styles.amountValue, styles.bold]}>{formatCurrency(payment.amount)}</Text>
             </View>
             
             <View style={[styles.amountRow, { marginBottom: 4 }]}>
               <Text style={styles.amountLabel}>Total déjà payé avant opération:</Text>
-              <Text style={[styles.amountValue, { color: '#2f855a' }]}>{formatCurrency(student.totalPaid)}</Text>
+              <Text style={[styles.amountValue, { color: '#2f855a' }]}>{formatCurrency(payment.amount)}</Text>
             </View>
             
             <View style={[styles.amountRow, { marginBottom: 4 }]}>
@@ -528,14 +527,14 @@ const PDFReceipt: React.FC<PDFReceiptProps> = ({
             <View style={[styles.amountRow, { marginTop: 8, paddingTop: 8, borderTop: '1px solid #e2e8f0' }]}>
               <Text style={[styles.amountLabel, styles.bold]}>Total payé après opération:</Text>
               <Text style={[styles.amountValue, styles.bold, { color: '#2f855a' }]}>
-                {formatCurrency(student.totalPaid + netAmount)}
+                {formatCurrency(payment.amount + netAmount)}
               </Text>
             </View>
             
             <View style={[styles.amountRow, { marginTop: 4 }]}>
               <Text style={[styles.amountLabel, styles.bold]}>Reste à payer après opération:</Text>
               <Text style={[styles.amountValue, styles.bold, { color: '#c53030' }]}>
-                {formatCurrency(Math.max(0, student.totalRemaining - netAmount))}
+                {formatCurrency(Math.max(0, payment.amount - netAmount))}
               </Text>
             </View>
           </View>

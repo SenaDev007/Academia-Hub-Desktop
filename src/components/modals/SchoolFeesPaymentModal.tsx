@@ -54,7 +54,55 @@ const SchoolFeesPaymentModal: React.FC<SchoolFeesPaymentModalProps> = ({
       setSchoolWhatsAppNumber(savedNumber);
       setSavedSchoolWhatsAppNumber(savedNumber);
     }
-  }, []);
+
+    // Si des données d'élève sont fournies, initialiser le formulaire en mode édition
+    if (studentData) {
+      setSelectedStudent(studentData);
+      setSelectedStudentId(studentData.id);
+      setPaymentAmount(studentData.amount || amount);
+      setPaymentDate(studentData.date || new Date().toISOString().split('T')[0]);
+      setPaymentTime(studentData.time || new Date().toTimeString().slice(0, 5));
+      setPaymentMethod(studentData.paymentMethod || 'mobile_money');
+      setPaymentReference(studentData.reference || '');
+      setReduction(studentData.reduction || 0);
+      setAmountGiven(studentData.amountGiven || studentData.amount || 0);
+      setChange(studentData.change || 0);
+      
+      // Pour le mobile money, initialiser les numéros de téléphone
+      if (studentData.paymentMethod === 'mobile_money') {
+        setSenderPhone(studentData.senderPhone || '');
+        setReceiverPhone(studentData.receiverPhone || savedNumber || '');
+      }
+      
+      // Pour la carte bancaire, initialiser les détails de la carte
+      if (studentData.paymentMethod === 'card') {
+        setCardNumber(studentData.cardNumber || '');
+        setExpiryDate(studentData.expiryDate || '');
+        setCvv(studentData.cvv || '');
+      }
+    } else {
+      // Mode création - générer un nouveau numéro de reçu
+      const generateReceiptNumber = () => {
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        return `REC-${year}${month}${day}-${random}`;
+      };
+      setReceiptNumber(generateReceiptNumber());
+      
+      // Réinitialiser les champs
+      setPaymentAmount(amount);
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentTime(new Date().toTimeString().slice(0, 5));
+      setPaymentMethod('mobile_money');
+      setPaymentReference('');
+      setReduction(0);
+      setAmountGiven(amount);
+      setChange(0);
+    }
+  }, [studentData, amount]);
 
   // Mock students data
   const allStudents = [
@@ -112,19 +160,6 @@ const SchoolFeesPaymentModal: React.FC<SchoolFeesPaymentModalProps> = ({
     student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.parentName.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Generate receipt number
-  React.useEffect(() => {
-    const generateReceiptNumber = () => {
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      return `REC-${year}${month}${day}-${random}`;
-    };
-    setReceiptNumber(generateReceiptNumber());
-  }, []);
 
   // Calculate change when amount given changes
   React.useEffect(() => {

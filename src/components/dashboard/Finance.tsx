@@ -480,11 +480,79 @@ const Finance: React.FC = () => {
   };
 
   // Fonction pour gérer l'édition d'un élément
-  const handleEditItem = (item: any, type: string) => {
-    if (type === 'payment') {
-      // Mettre à jour le paiement sélectionné et ouvrir le modal de paiement
-      setSelectedItem(item);
-      setIsPaymentModalOpen(true);
+  const handleEditItem = (item: any, type: string = 'payment') => {
+    try {
+      // Mettre à jour le type d'action
+      setActionType('edit');
+      
+      // Ouvrir le modal approprié selon le type d'élément
+      switch (type) {
+        case 'payment':
+          // Préparer les données pour le modal de paiement
+          const paymentData = {
+            ...item,
+            studentId: item.studentId || item.student?.id,
+            student: item.student || students.find((s: any) => s.id === item.studentId),
+            className: item.className || item.class,
+            feeType: item.feeType || item.type || 'Scolarité',
+            paymentMethod: item.paymentMethod || item.method || 'mobile_money',
+            amount: item.amount || 0,
+            date: item.date || new Date().toISOString().split('T')[0],
+            time: item.time || new Date().toTimeString().slice(0, 5),
+            reference: item.reference || '',
+            status: item.status || 'completed',
+            // Ajouter les informations spécifiques aux frais de scolarité
+            studentName: item.studentName || item.student?.name,
+            invoiceNumber: item.invoiceNumber || `FACT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            reduction: item.reduction || 0,
+            amountGiven: item.amountGiven || item.amount || 0,
+            change: item.change || 0
+          };
+          setSelectedItem(paymentData);
+          setIsPaymentModalOpen(true);
+          break;
+          
+        case 'expense':
+          // Préparer les données pour le modal de dépense
+          const expenseData = {
+            ...item,
+            amount: item.amount || 0,
+            date: item.date || new Date().toISOString().split('T')[0],
+            status: item.status || 'pending',
+            paymentMethod: item.paymentMethod || item.method || 'CASH'
+          };
+          setSelectedItem(expenseData);
+          setIsExpenseModalOpen(true);
+          break;
+          
+        case 'invoice':
+          // Préparer les données pour le modal de facture
+          const invoiceData = {
+            ...item,
+            studentId: item.studentId || item.student?.id,
+            student: item.student || students.find((s: any) => s.id === item.studentId),
+            amount: item.amount || 0,
+            dueDate: item.dueDate || new Date().toISOString().split('T')[0],
+            status: item.status || 'unpaid',
+            items: item.items || []
+          };
+          setSelectedItem(invoiceData);
+          setIsInvoiceModalOpen(true);
+          break;
+          
+        default:
+          console.warn('Type d\'élément non pris en charge pour l\'édition:', type);
+          break;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la préparation de l\'édition:', error);
+      // Afficher une notification d'erreur à l'utilisateur
+      setAlertMessage({
+        type: 'error',
+        title: 'Erreur',
+        content: 'Une erreur est survenue lors de la préparation de l\'édition.'
+      });
+      setIsAlertModalOpen(true);
     }
   };
 
@@ -579,14 +647,68 @@ const Finance: React.FC = () => {
     setStudentPaymentHistory(getStudentPaymentHistory(student.id));
   };
 
-  const handleSavePayment = (paymentData: any) => {
-    console.log('Saving payment:', paymentData);
-    setAlertMessage({
-      title: 'Paiement enregistré',
-      message: 'Le paiement a été enregistré avec succès.',
-      type: 'success'
-    });
-    setIsAlertModalOpen(true);
+  const handleSavePayment = async (paymentData: any) => {
+    try {
+      console.log('Saving payment:', paymentData);
+      
+      // Mettre à jour les données locales pour refléter les changements immédiatement
+      if (actionType === 'edit' && selectedItem) {
+        // Mise à jour d'un paiement existant
+        const updatedPayments = recentPayments.map(p => 
+          p.id === selectedItem.id ? { ...p, ...paymentData } : p
+        );
+        setRecentPayments(updatedPayments);
+        
+        // Mettre à jour les statistiques
+        updatePaymentStats(updatedPayments);
+        
+        setAlertMessage({
+          title: 'Paiement mis à jour',
+          message: 'Le paiement a été mis à jour avec succès.',
+          type: 'success'
+        });
+      } else {
+        // Ajout d'un nouveau paiement
+        const newPayment = {
+          id: `pay-${Date.now()}`,
+          ...paymentData,
+          status: 'completed',
+          date: new Date().toISOString(),
+        };
+        
+        setRecentPayments(prev => [newPayment, ...prev]);
+        
+        // Mettre à jour les statistiques
+        updatePaymentStats([...recentPayments, newPayment]);
+        
+        setAlertMessage({
+          title: 'Paiement enregistré',
+          message: 'Le paiement a été enregistré avec succès.',
+          type: 'success'
+        });
+      }
+      
+      // Fermer le modal de paiement
+      setIsPaymentModalOpen(false);
+      
+      // Afficher la notification
+      setIsAlertModalOpen(true);
+      
+      // Réinitialiser l'élément sélectionné après un court délai
+      setTimeout(() => {
+        setSelectedItem(null);
+        setActionType('add');
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du paiement:', error);
+      setAlertMessage({
+        title: 'Erreur',
+        message: 'Une erreur est survenue lors de l\'enregistrement du paiement.',
+        type: 'error'
+      });
+      setIsAlertModalOpen(true);
+    }
   };
 
   const handleSaveInvoice = (invoiceData: any) => {
@@ -725,6 +847,63 @@ const Finance: React.FC = () => {
   const GlobalStyles = () => (
     <style jsx global>{tooltipStyle}</style>
   );
+
+  // Fonction pour mettre à jour les statistiques de paiement
+  const updatePaymentStats = (payments: any[]) => {
+    // Calculer le total des paiements
+    const totalAmount = payments.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
+    
+    // Compter les paiements par méthode
+    const paymentMethods = payments.reduce((acc, payment) => {
+      const method = payment.paymentMethod || 'other';
+      acc[method] = (acc[method] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Mettre à jour l'état des statistiques
+    setPaymentStats({
+      totalAmount,
+      totalPayments: payments.length,
+      paymentMethods,
+      lastUpdated: new Date().toISOString()
+    });
+    
+    // Mettre à jour le graphique des paiements mensuels
+    updateMonthlyPaymentsChart(payments);
+  };
+  
+  // Fonction pour mettre à jour le graphique des paiements mensuels
+  const updateMonthlyPaymentsChart = (payments: any[]) => {
+    // Grouper les paiements par mois
+    const monthlyData = payments.reduce((acc, payment) => {
+      const date = new Date(payment.date || new Date());
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!acc[monthYear]) {
+        acc[monthYear] = 0;
+      }
+      
+      acc[monthYear] += parseFloat(payment.amount) || 0;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Trier les mois par ordre chronologique
+    const sortedMonths = Object.keys(monthlyData).sort();
+    
+    // Mettre à jour l'état du graphique
+    setMonthlyPaymentsData({
+      labels: sortedMonths,
+      datasets: [
+        {
+          label: 'Montant des paiements',
+          data: sortedMonths.map(month => monthlyData[month] || 0),
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+        },
+      ],
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -997,7 +1176,7 @@ const Finance: React.FC = () => {
                               <Eye size={16} />
                             </button>
                             <button 
-                              onClick={() => handleEditItem(payment)}
+                              onClick={() => handleEditItem(payment, 'payment')}
                               className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
                               data-tooltip="Modifier"
                             >
@@ -1116,7 +1295,7 @@ const Finance: React.FC = () => {
                               <Eye size={16} />
                             </button>
                             <button 
-                              onClick={() => handleEditItem(payment)}
+                              onClick={() => handleEditItem(payment, 'payment')}
                               className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
                               data-tooltip="Modifier"
                             >
@@ -1235,7 +1414,7 @@ const Finance: React.FC = () => {
                               <Eye size={16} />
                             </button>
                             <button 
-                              onClick={() => handleEditItem(payment)}
+                              onClick={() => handleEditItem(payment, 'payment')}
                               className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900"
                               data-tooltip="Modifier"
                             >
@@ -1363,7 +1542,7 @@ const Finance: React.FC = () => {
                           </button>
                         )}
                         <button 
-                          onClick={() => handleEditItem(expense)}
+                          onClick={() => handleEditItem(expense, 'expense')}
                           className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                         >
                           Éditer
