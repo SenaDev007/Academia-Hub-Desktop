@@ -1,25 +1,5 @@
-import { apiClient } from './config';
-
-export interface Teacher {
-  id: string;
-  matricule: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  dateOfBirth?: string;
-  address?: string;
-  qualification?: string;
-  specialization?: string[];
-  hireDate?: string;
-  salary?: number;
-  status: 'active' | 'inactive' | 'on_leave';
-  photo?: string;
-  subjects?: string[];
-  classes?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+import { dataService } from '../dataService';
+import { Teacher } from '../dataService';
 
 export interface CreateTeacherData {
   matricule?: string;
@@ -33,7 +13,7 @@ export interface CreateTeacherData {
   specialization?: string[];
   hireDate?: string;
   salary?: number;
-  photo?: File;
+  photo?: string;
   subjects?: string[];
 }
 
@@ -47,123 +27,268 @@ export interface TeacherFilters {
 
 export const teachersService = {
   async getTeachers(filters?: TeacherFilters) {
-    const response = await apiClient.get('/teachers', { params: filters });
-    return response.data;
+    try {
+      const teachers = await dataService.getAllTeachers(filters);
+      return {
+        data: teachers,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des enseignants:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async getTeacher(id: string): Promise<Teacher> {
-    const response = await apiClient.get(`/teachers/${id}`);
-    return response.data;
-  },
-
-  async createTeacher(data: CreateTeacherData): Promise<Teacher> {
-    const formData = new FormData();
-    
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof CreateTeacherData];
-      if (value !== undefined) {
-        if (key === 'photo' && value instanceof File) {
-          formData.append('photo', value);
-        } else if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value as string);
-        }
+  async getTeacher(id: string) {
+    try {
+      const teacher = await dataService.getTeacherById(id);
+      if (!teacher) {
+        return {
+          data: null,
+          success: false,
+          error: 'Enseignant non trouvé'
+        };
       }
-    });
-
-    const response = await apiClient.post('/teachers', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+      return {
+        data: teacher,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'enseignant:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async updateTeacher(id: string, data: Partial<CreateTeacherData>): Promise<Teacher> {
-    const formData = new FormData();
-    
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof CreateTeacherData];
-      if (value !== undefined) {
-        if (key === 'photo' && value instanceof File) {
-          formData.append('photo', value);
-        } else if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value as string);
-        }
-      }
-    });
-
-    const response = await apiClient.put(`/teachers/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+  async createTeacher(data: CreateTeacherData) {
+    try {
+      const teacher = await dataService.createTeacher(data);
+      return {
+        data: teacher,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'enseignant:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async deleteTeacher(id: string): Promise<void> {
-    await apiClient.delete(`/teachers/${id}`);
+  async updateTeacher(id: string, data: Partial<CreateTeacherData>) {
+    try {
+      const teacher = await dataService.updateTeacher(id, data);
+      return {
+        data: teacher,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'enseignant:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
+  },
+
+  async deleteTeacher(id: string) {
+    try {
+      const success = await dataService.deleteTeacher(id);
+      return {
+        data: success,
+        success
+      };
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'enseignant:', error);
+      return {
+        data: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getTeacherClasses(teacherId: string) {
-    const response = await apiClient.get(`/teachers/${teacherId}/classes`);
-    return response.data;
+    try {
+      const classes = await dataService.getTeacherClasses(teacherId);
+      return {
+        data: classes,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des classes de l\'enseignant:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getTeacherSubjects(teacherId: string) {
-    const response = await apiClient.get(`/teachers/${teacherId}/subjects`);
-    return response.data;
+    try {
+      const subjects = await dataService.getTeacherSubjects(teacherId);
+      return {
+        data: subjects,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des matières de l\'enseignant:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getTeacherSchedule(teacherId: string, date?: string) {
-    const response = await apiClient.get(`/teachers/${teacherId}/schedule`, {
-      params: { date }
-    });
-    return response.data;
+    try {
+      const schedules = await dataService.getAllSchedules({
+        teacherId,
+        date: date || new Date().toISOString().split('T')[0]
+      });
+      return {
+        data: schedules,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'emploi du temps:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getTeacherStats(teacherId: string) {
-    const response = await apiClient.get(`/teachers/${teacherId}/stats`);
-    return response.data;
+    try {
+      const stats = await dataService.getTeacherStats(teacherId);
+      return {
+        data: stats,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async assignToClass(teacherId: string, classId: string): Promise<void> {
-    await apiClient.post(`/teachers/${teacherId}/classes`, { classId });
+  async assignToClass(teacherId: string, classId: string) {
+    try {
+      const success = await dataService.assignTeacherToClass(teacherId, classId);
+      return {
+        data: success,
+        success
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation à la classe:', error);
+      return {
+        data: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async assignToSubject(teacherId: string, subjectId: string): Promise<void> {
-    await apiClient.post(`/teachers/${teacherId}/subjects`, { subjectId });
+  async assignToSubject(teacherId: string, subjectId: string) {
+    try {
+      const success = await dataService.assignTeacherToSubject(teacherId, subjectId);
+      return {
+        data: success,
+        success
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation à la matière:', error);
+      return {
+        data: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async uploadPhoto(id: string, file: File): Promise<{ photoUrl: string }> {
-    const formData = new FormData();
-    formData.append('photo', file);
-    
-    const response = await apiClient.post(`/teachers/${id}/photo`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+  async uploadPhoto(id: string, photoPath: string) {
+    try {
+      const teacher = await dataService.updateTeacher(id, { photo: photoPath });
+      return {
+        data: { photoUrl: photoPath },
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'upload de la photo:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async generateMatricule(): Promise<{ matricule: string }> {
-    const response = await apiClient.get('/teachers/matricule/generate');
-    return response.data;
+  async generateMatricule() {
+    try {
+      const matricule = `ENS-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+      return {
+        data: { matricule },
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la génération du matricule:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async importTeachers(file: File): Promise<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await apiClient.post('/teachers/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+  async importTeachers(filePath: string) {
+    try {
+      // Pour l'import, on utilisera une méthode de parsing CSV/Excel via le main process
+      const result = await dataService.importTeachers(filePath);
+      return {
+        data: result,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'import des enseignants:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async exportTeachers(filters?: TeacherFilters): Promise<Blob> {
-    const response = await apiClient.get('/teachers/export', {
-      params: filters,
-      responseType: 'blob'
-    });
-    return response.data;
+  async exportTeachers(filters?: TeacherFilters) {
+    try {
+      const teachers = await dataService.getAllTeachers(filters);
+      return {
+        data: teachers,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'export des enseignants:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   }
 };

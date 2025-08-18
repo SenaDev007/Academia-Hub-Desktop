@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
 import { Download, FileText, Calendar, User, School, CheckCircle, AlertCircle, Settings } from 'lucide-react';
 import { CahierJournalEntry } from '../types';
+import { pdfService } from '../../../../services/pdfService';
+import { useNotification } from '../../../../hooks/useNotification';
 
 interface ExportPDFProps {
   entries: CahierJournalEntry[];
   selectedEntries?: string[];
-  onExport: (config: ExportConfig) => void;
+  schoolInfo: {
+    name: string;
+    address: string;
+    city: string;
+    phone: string;
+    email: string;
+    director?: string;
+  };
   onClose: () => void;
 }
 
 interface ExportConfig {
-  format: 'individual' | 'weekly' | 'monthly' | 'custom';
+  format: 'A4' | 'A5' | 'letter';
+  orientation: 'portrait' | 'landscape';
   dateRange: {
     start: string;
     end: string;
@@ -23,16 +33,23 @@ interface ExportConfig {
     evaluation: boolean;
     observations: boolean;
   };
-  template: 'standard' | 'inspection' | 'minimal' | 'detailed';
-  orientation: 'portrait' | 'landscape';
+  template: 'standard' | 'official' | 'minimal';
+  quality: 'high' | 'medium' | 'low';
   includeSignature: boolean;
-  includeHeader: boolean;
-  customHeader?: string;
+  margins: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
 }
 
-const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, onExport, onClose }) => {
+const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, schoolInfo, onClose }) => {
+  const [loading, setLoading] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
   const [config, setConfig] = useState<ExportConfig>({
-    format: 'individual',
+    format: 'A4',
+    orientation: 'portrait',
     dateRange: {
       start: new Date().toISOString().split('T')[0],
       end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -46,70 +63,88 @@ const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, onExpor
       observations: false
     },
     template: 'standard',
-    orientation: 'portrait',
+    quality: 'high',
     includeSignature: true,
-    includeHeader: true
+    margins: {
+      top: 20,
+      bottom: 20,
+      left: 20,
+      right: 20
+    }
   });
 
-  const [activeTab, setActiveTab] = useState<'format' | 'content' | 'style'>('format');
+  const { showNotification } = useNotification();
 
-  const templates = [
-    {
-      id: 'standard',
-      nom: 'Standard',
-      description: 'Format standard pour usage quotidien',
-      preview: 'Mise en page équilibrée avec toutes les sections'
-    },
-    {
-      id: 'inspection',
-      nom: 'Inspection',
-      description: 'Format officiel pour les inspections pédagogiques',
-      preview: 'Conforme aux exigences du MEMP'
-    },
-    {
-      id: 'minimal',
-      nom: 'Minimal',
-      description: 'Format condensé avec informations essentielles',
-      preview: 'Objectifs, déroulement et évaluation uniquement'
-    },
-    {
-      id: 'detailed',
-      nom: 'Détaillé',
-      description: 'Format complet avec toutes les informations',
-      preview: 'Toutes les sections avec commentaires et observations'
-    }
-  ];
+  const handleExport = async (action: 'download' | 'preview' | 'print') => {
+    setLoading(true);
+    
+    try {
+      // Filtrer les entrées selon la période
+      let filteredEntries = entries;
 
-  const getFilteredEntries = () => {
-    let filtered = entries;
+      if (selectedEntries && selectedEntries.length > 0) {
+        filteredEntries = entries.filter(entry => selectedEntries.includes(entry.id));
+      }
 
-    if (selectedEntries && selectedEntries.length > 0) {
-      filtered = entries.filter(entry => selectedEntries.includes(entry.id));
-    }
+      if (config.format !== 'custom') {
+        const start = new Date(config.dateRange.start);
+        const end = new Date(config.dateRange.end);
+        filteredEntries = filteredEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= start && entryDate <= end;
+        });
+      }
 
-    if (config.format !== 'custom') {
-      const start = new Date(config.dateRange.start);
-      const end = new Date(config.dateRange.end);
-      filtered = filtered.filter(entry => {
-        const entryDate = new Date(entry.date);
-        return entryDate >= start && entryDate <= end;
+      if (filteredEntries.length === 0) {
+        showNotification({
+          type: 'warning',
+          message: 'Aucune entrée trouvée pour la période sélectionnée'
+        });
+        return;
+      }
+
+      const pdfData = await pdfService.generateCahierJournal({
+        entries: filteredEntries,
+        schoolInfo,
+        period: config.dateRange,
+        format: config.template === 'individual' ? 'individual' : 'monthly'
+      }, {
+        format: config.format,
+        orientation: config.orientation,
+        margins: config.margins,
+        quality: config.quality,
+        includeHeader: true,
+        includeFooter: true
       });
+
+      const filename = `cahier-journal-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      switch (action) {
+        case 'download':
+          const filePath = await pdfService.savePDF(pdfData, filename, 'cahier-journal');
+          showNotification({
+            type: 'success',
+            message: `Cahier journal exporté avec succès: ${filePath}`
+          });
+          break;
+          
+        case 'preview':
+          await pdfService.previewPDF(pdfData, filename);
+          break;
+          
+        case 'print':
+          await pdfService.printPDF(pdfData, filename);
+          break;
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+      showNotification({
+        type: 'error',
+        message: `Erreur lors de l'export: ${error.message}`
+      });
+    } finally {
+      setLoading(false);
     }
-
-    return filtered;
-  };
-
-  const handleExport = () => {
-    alert('🔄 Génération du PDF en cours...');
-    
-    // Simuler la génération PDF
-    setTimeout(() => {
-      const fileName = `cahier_journal_${config.format}_${new Date().toISOString().split('T')[0]}.pdf`;
-      alert(`✅ PDF généré avec succès !\nFichier: ${fileName}\nNombre de séances: ${filteredEntries.length}`);
-      onClose();
-    }, 2000);
-    
-    onExport(config);
   };
 
   const updateConfig = (updates: Partial<ExportConfig>) => {
@@ -126,7 +161,12 @@ const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, onExpor
     }));
   };
 
-  const filteredEntries = getFilteredEntries();
+  const filteredEntries = entries.filter(entry => {
+    const entryDate = new Date(entry.date);
+    const start = new Date(config.dateRange.start);
+    const end = new Date(config.dateRange.end);
+    return entryDate >= start && entryDate <= end;
+  });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -158,37 +198,37 @@ const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, onExpor
             <div className="p-4">
               <nav className="space-y-2">
                 <button
-                  onClick={() => setActiveTab('format')}
+                  onClick={() => updateConfig({ format: 'A4', orientation: 'portrait' })}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === 'format' 
-                      ? 'bg-blue-100 text-blue-700' 
+                    config.format === 'A4' && config.orientation === 'portrait'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Calendar size={16} className="inline mr-2" />
-                  Format et période
+                  Format A4 Portrait
                 </button>
                 <button
-                  onClick={() => setActiveTab('content')}
+                  onClick={() => updateConfig({ format: 'A5', orientation: 'landscape' })}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === 'content' 
-                      ? 'bg-blue-100 text-blue-700' 
+                    config.format === 'A5' && config.orientation === 'landscape'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <FileText size={16} className="inline mr-2" />
-                  Contenu
+                  Format A5 Paysage
                 </button>
                 <button
-                  onClick={() => setActiveTab('style')}
+                  onClick={() => updateConfig({ format: 'letter', orientation: 'portrait' })}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === 'style' 
-                      ? 'bg-blue-100 text-blue-700' 
+                    config.format === 'letter' && config.orientation === 'portrait'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Settings size={16} className="inline mr-2" />
-                  Style et mise en page
+                  Format Lettre Portrait
                 </button>
               </nav>
             </div>
@@ -214,232 +254,74 @@ const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, onExpor
 
           {/* Contenu principal */}
           <div className="flex-1 p-6 overflow-y-auto">
-            {activeTab === 'format' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Format d'export</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="format"
-                        value="individual"
-                        checked={config.format === 'individual'}
-                        onChange={(e) => updateConfig({ format: e.target.value as any })}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-900">Séances individuelles</div>
-                        <div className="text-sm text-gray-600">Une page par séance</div>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="format"
-                        value="weekly"
-                        checked={config.format === 'weekly'}
-                        onChange={(e) => updateConfig({ format: e.target.value as any })}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-900">Vue hebdomadaire</div>
-                        <div className="text-sm text-gray-600">Regroupement par semaine</div>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="format"
-                        value="monthly"
-                        checked={config.format === 'monthly'}
-                        onChange={(e) => updateConfig({ format: e.target.value as any })}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-900">Vue mensuelle</div>
-                        <div className="text-sm text-gray-600">Calendrier mensuel</div>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="format"
-                        value="custom"
-                        checked={config.format === 'custom'}
-                        onChange={(e) => updateConfig({ format: e.target.value as any })}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-900">Personnalisé</div>
-                        <div className="text-sm text-gray-600">Sélection manuelle</div>
-                      </div>
-                    </label>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Période</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+                    <input
+                      type="date"
+                      value={config.dateRange.start}
+                      onChange={(e) => updateConfig({
+                        dateRange: { ...config.dateRange, start: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
                   </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Période</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
-                      <input
-                        type="date"
-                        value={config.dateRange.start}
-                        onChange={(e) => updateConfig({
-                          dateRange: { ...config.dateRange, start: e.target.value }
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date de fin</label>
-                      <input
-                        type="date"
-                        value={config.dateRange.end}
-                        onChange={(e) => updateConfig({
-                          dateRange: { ...config.dateRange, end: e.target.value }
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date de fin</label>
+                    <input
+                      type="date"
+                      value={config.dateRange.end}
+                      onChange={(e) => updateConfig({
+                        dateRange: { ...config.dateRange, end: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
                   </div>
                 </div>
               </div>
-            )}
 
-            {activeTab === 'content' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Sections à inclure</h3>
-                  <div className="space-y-3">
-                    {Object.entries(config.includeDetails).map(([key, value]) => (
-                      <label key={key} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={value}
-                          onChange={(e) => updateIncludeDetails(key as any, e.target.checked)}
-                          className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-gray-700 capitalize">
-                          {key === 'objectifs' ? 'Objectifs pédagogiques' :
-                           key === 'competences' ? 'Compétences visées' :
-                           key === 'deroulement' ? 'Déroulement de la séance' :
-                           key === 'supports' ? 'Supports et matériels' :
-                           key === 'evaluation' ? 'Modalités d\'évaluation' :
-                           'Observations et adaptations'}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Options supplémentaires</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Détails à inclure</h3>
+                <div className="space-y-3">
+                  {Object.entries(config.includeDetails).map(([key, value]) => (
+                    <label key={key} className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={config.includeHeader}
-                        onChange={(e) => updateConfig({ includeHeader: e.target.checked })}
+                        checked={value}
+                        onChange={(e) => updateIncludeDetails(key as any, e.target.checked)}
                         className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <span className="text-gray-700">Inclure l'en-tête de l'établissement</span>
+                      <span className="text-gray-700 capitalize">
+                        {key === 'objectifs' ? 'Objectifs pédagogiques' :
+                         key === 'competences' ? 'Compétences visées' :
+                         key === 'deroulement' ? 'Déroulement de la séance' :
+                         key === 'supports' ? 'Supports et matériels' :
+                         key === 'evaluation' ? 'Modalités d\'évaluation' :
+                         'Observations et adaptations'}
+                      </span>
                     </label>
-
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={config.includeSignature}
-                        onChange={(e) => updateConfig({ includeSignature: e.target.checked })}
-                        className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700">Espace pour signature</span>
-                    </label>
-                  </div>
-
-                  {config.includeHeader && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        En-tête personnalisé (optionnel)
-                      </label>
-                      <textarea
-                        value={config.customHeader || ''}
-                        onChange={(e) => updateConfig({ customHeader: e.target.value })}
-                        placeholder="École Primaire Publique de..."
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            )}
 
-            {activeTab === 'style' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Modèle de document</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {templates.map((template) => (
-                      <label
-                        key={template.id}
-                        className={`flex items-start p-4 border rounded-lg cursor-pointer transition-colors ${
-                          config.template === template.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="template"
-                          value={template.id}
-                          checked={config.template === template.id}
-                          onChange={(e) => updateConfig({ template: e.target.value as any })}
-                          className="mr-3 mt-1"
-                        />
-                        <div>
-                          <div className="font-medium text-gray-900">{template.nom}</div>
-                          <div className="text-sm text-gray-600 mb-1">{template.description}</div>
-                          <div className="text-xs text-gray-500">{template.preview}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Orientation</h3>
-                  <div className="flex gap-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="orientation"
-                        value="portrait"
-                        checked={config.orientation === 'portrait'}
-                        onChange={(e) => updateConfig({ orientation: e.target.value as any })}
-                        className="mr-2"
-                      />
-                      <span className="text-gray-700">Portrait</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="orientation"
-                        value="landscape"
-                        checked={config.orientation === 'landscape'}
-                        onChange={(e) => updateConfig({ orientation: e.target.value as any })}
-                        className="mr-2"
-                      />
-                      <span className="text-gray-700">Paysage</span>
-                    </label>
-                  </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Options supplémentaires</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={config.includeSignature}
+                      onChange={(e) => updateConfig({ includeSignature: e.target.checked })}
+                      className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Espace pour signature</span>
+                  </label>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -458,7 +340,7 @@ const ExportPDF: React.FC<ExportPDFProps> = ({ entries, selectedEntries, onExpor
                 Annuler
               </button>
               <button
-                onClick={handleExport}
+                onClick={() => handleExport('download')}
                 disabled={filteredEntries.length === 0}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >

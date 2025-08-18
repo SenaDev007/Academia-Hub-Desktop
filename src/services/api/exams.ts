@@ -1,28 +1,5 @@
-import { apiClient } from './config';
-
-export interface Exam {
-  id: string;
-  title: string;
-  description?: string;
-  subjectId: string;
-  subjectName?: string;
-  classId: string;
-  className?: string;
-  teacherId: string;
-  teacherName?: string;
-  termId: string;
-  type: 'test' | 'quiz' | 'exam' | 'assignment';
-  date: string;
-  startTime: string;
-  endTime: string;
-  maxScore: number;
-  coefficient: number;
-  room?: string;
-  instructions?: string;
-  status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
-  createdAt: string;
-  updatedAt: string;
-}
+import { dataService } from '../dataService';
+import { Exam, ExamResult } from '../dataService';
 
 export interface CreateExamData {
   title: string;
@@ -40,19 +17,6 @@ export interface CreateExamData {
   instructions?: string;
 }
 
-export interface ExamResult {
-  id: string;
-  examId: string;
-  studentId: string;
-  studentName?: string;
-  score: number;
-  maxScore: number;
-  grade?: string;
-  remarks?: string;
-  status: 'present' | 'absent' | 'excused';
-  submittedAt?: string;
-}
-
 export const examsService = {
   async getExams(params?: {
     classId?: string;
@@ -65,41 +29,136 @@ export const examsService = {
     page?: number;
     limit?: number;
   }) {
-    const response = await apiClient.get('/exams', { params });
-    return response.data;
+    try {
+      const exams = await dataService.getAllExams(params);
+      return {
+        data: exams,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des examens:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async getExam(id: string): Promise<Exam> {
-    const response = await apiClient.get(`/exams/${id}`);
-    return response.data;
+  async getExam(id: string) {
+    try {
+      const exam = await dataService.getExamById(id);
+      if (!exam) {
+        return {
+          data: null,
+          success: false,
+          error: 'Examen non trouvé'
+        };
+      }
+      return {
+        data: exam,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'examen:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async createExam(data: CreateExamData): Promise<Exam> {
-    const response = await apiClient.post('/exams', data);
-    return response.data;
+  async createExam(data: CreateExamData) {
+    try {
+      const exam = await dataService.createExam(data);
+      return {
+        data: exam,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'examen:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async updateExam(id: string, data: Partial<CreateExamData>): Promise<Exam> {
-    const response = await apiClient.put(`/exams/${id}`, data);
-    return response.data;
+  async updateExam(id: string, data: Partial<CreateExamData>) {
+    try {
+      const exam = await dataService.updateExam(id, data);
+      return {
+        data: exam,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'examen:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async deleteExam(id: string): Promise<void> {
-    await apiClient.delete(`/exams/${id}`);
+  async deleteExam(id: string) {
+    try {
+      const success = await dataService.deleteExam(id);
+      return {
+        data: success,
+        success
+      };
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'examen:', error);
+      return {
+        data: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getExamResults(examId: string) {
-    const response = await apiClient.get(`/exams/${examId}/results`);
-    return response.data;
+    try {
+      const results = await dataService.getExamResults(examId);
+      return {
+        data: results,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des résultats:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async submitExamResult(examId: string, studentId: string, score: number, remarks?: string): Promise<ExamResult> {
-    const response = await apiClient.post(`/exams/${examId}/results`, {
-      studentId,
-      score,
-      remarks
-    });
-    return response.data;
+  async submitExamResult(examId: string, studentId: string, score: number, remarks?: string) {
+    try {
+      const result = await dataService.submitExamResult({
+        examId,
+        studentId,
+        score,
+        remarks,
+        maxScore: 20,
+        status: 'present'
+      });
+      return {
+        data: result,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la soumission du résultat:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async bulkSubmitResults(examId: string, results: Array<{
@@ -107,20 +166,71 @@ export const examsService = {
     score: number;
     remarks?: string;
     status?: string;
-  }>): Promise<ExamResult[]> {
-    const response = await apiClient.post(`/exams/${examId}/results/bulk`, { results });
-    return response.data;
+  }>) {
+    try {
+      const submittedResults = await Promise.all(
+        results.map(result => 
+          dataService.submitExamResult({
+            examId,
+            studentId: result.studentId,
+            score: result.score,
+            remarks: result.remarks,
+            maxScore: 20,
+            status: result.status || 'present'
+          })
+        )
+      );
+      return {
+        data: submittedResults,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la soumission en masse des résultats:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getUpcomingExams(limit: number = 10) {
-    const response = await apiClient.get('/exams/upcoming', { params: { limit } });
-    return response.data;
+    try {
+      const exams = await dataService.getAllExams({
+        dateFrom: new Date().toISOString().split('T')[0],
+        limit
+      });
+      return {
+        data: exams,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des examens à venir:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
   async getExamSchedule(classId: string, date?: string) {
-    const response = await apiClient.get(`/exams/schedule/${classId}`, {
-      params: { date }
-    });
-    return response.data;
+    try {
+      const exams = await dataService.getAllExams({
+        classId,
+        dateFrom: date || new Date().toISOString().split('T')[0]
+      });
+      return {
+        data: exams,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération du planning des examens:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   }
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, FileText, Printer, Share2, Settings, Eye } from 'lucide-react';
+import { pdfService } from '../../../../services/pdfService';
 
 const ExportPDFOfficial = ({ fiche, onExport }) => {
   const [exportOptions, setExportOptions] = useState({
@@ -46,20 +47,30 @@ const ExportPDFOfficial = ({ fiche, onExport }) => {
     setIsExporting(true);
     
     try {
-      // Simulation de génération PDF
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const pdfData = await pdfService.generatePedagogicalSheet(fiche, {
+        format: exportOptions.format,
+        orientation: exportOptions.orientation,
+        quality: exportOptions.qualite,
+        margins: {
+          top: exportOptions.marges === 'wide' ? 30 : exportOptions.marges === 'narrow' ? 10 : 20,
+          bottom: exportOptions.marges === 'wide' ? 30 : exportOptions.marges === 'narrow' ? 10 : 20,
+          left: exportOptions.marges === 'wide' ? 30 : exportOptions.marges === 'narrow' ? 10 : 20,
+          right: exportOptions.marges === 'wide' ? 30 : exportOptions.marges === 'narrow' ? 10 : 20
+        },
+        includeHeader: true,
+        includeFooter: true
+      });
+
+      const filename = `fiche_${fiche.saNumero}_${fiche.classe}_${fiche.matiere.replace(/\s+/g, '_')}.pdf`;
+
+      const filePath = await pdfService.savePDF(pdfData, filename, 'fiches-pedagogiques');
       
-      const exportData = {
+      onExport({
         fiche,
         options: exportOptions,
         timestamp: new Date().toISOString(),
-        filename: `fiche_${fiche.saNumero}_${fiche.classe}_${fiche.matiere.replace(/\s+/g, '_')}.pdf`
-      };
-      
-      onExport(exportData);
-      
-      // Simulation de téléchargement
-      console.log('Export PDF généré:', exportData);
+        filename: filePath
+      });
       
     } catch (error) {
       console.error('Erreur lors de l\'export:', error);

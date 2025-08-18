@@ -1,156 +1,205 @@
-import { apiClient } from './config';
-
-export interface Student {
-  id: string;
-  matricule: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  dateOfBirth?: string;
-  placeOfBirth?: string;
-  address?: string;
-  parentName?: string;
-  parentPhone?: string;
-  parentEmail?: string;
-  classId: string;
-  className?: string;
-  academicYearId: string;
-  photo?: string;
-  status: 'active' | 'inactive' | 'graduated' | 'transferred';
-  enrollmentDate: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { dataService } from '../dataService';
+import { Student } from '../dataService';
 
 export interface CreateStudentData {
-  matricule?: string;
   firstName: string;
   lastName: string;
   email?: string;
   phone?: string;
   dateOfBirth?: string;
-  placeOfBirth?: string;
   address?: string;
   parentName?: string;
   parentPhone?: string;
   parentEmail?: string;
-  classId: string;
-  academicYearId: string;
-  photo?: File;
+  classId?: string | null;
+  academicYearId?: string | null;
+  enrollmentDate?: string;
+  studentNumber?: string;
+  photo?: string;
+  status?: 'active' | 'inactive' | 'graduated';
+  notes?: string;
 }
 
-export interface StudentFilters {
-  classId?: string;
-  academicYearId?: string;
-  status?: string;
-  search?: string;
-  page?: number;
-  limit?: number;
-}
+export interface UpdateStudentData extends Partial<CreateStudentData> {}
 
 export const studentsService = {
-  async getStudents(filters?: StudentFilters) {
-    const response = await apiClient.get('/students', { params: filters });
-    return response.data;
+  // Récupérer tous les étudiants
+  async getAllStudents(
+    filters?: {
+      classId?: string;
+      academicYearId?: string;
+      status?: string;
+      search?: string;
+    },
+    pagination?: {
+      page?: number;
+      limit?: number;
+    }
+  ) {
+    try {
+      const students = await dataService.getAllStudents(filters, pagination);
+      return {
+        data: students,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des étudiants:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async getStudent(id: string): Promise<Student> {
-    const response = await apiClient.get(`/students/${id}`);
-    return response.data;
-  },
-
-  async createStudent(data: CreateStudentData): Promise<Student> {
-    const formData = new FormData();
-    
-    // Handle file upload
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof CreateStudentData];
-      if (value !== undefined) {
-        if (key === 'photo' && value instanceof File) {
-          formData.append('photo', value);
-        } else {
-          formData.append(key, value as string);
-        }
+  // Récupérer un étudiant par ID
+  async getStudentById(id: string) {
+    try {
+      const student = await dataService.getStudentById(id);
+      if (!student) {
+        return {
+          data: null,
+          success: false,
+          error: 'Étudiant non trouvé'
+        };
       }
-    });
-
-    const response = await apiClient.post('/students', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+      return {
+        data: student,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'étudiant:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async updateStudent(id: string, data: Partial<CreateStudentData>): Promise<Student> {
-    const formData = new FormData();
-    
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof CreateStudentData];
-      if (value !== undefined) {
-        if (key === 'photo' && value instanceof File) {
-          formData.append('photo', value);
-        } else {
-          formData.append(key, value as string);
-        }
-      }
-    });
-
-    const response = await apiClient.put(`/students/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+  // Créer un nouvel étudiant
+  async createStudent(data: CreateStudentData) {
+    try {
+      const student = await dataService.createStudent(data);
+      return {
+        data: student,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'étudiant:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async deleteStudent(id: string): Promise<void> {
-    await apiClient.delete(`/students/${id}`);
+  // Mettre à jour un étudiant
+  async updateStudent(id: string, data: UpdateStudentData) {
+    try {
+      const student = await dataService.updateStudent(id, data);
+      return {
+        data: student,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'étudiant:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async getStudentsByClass(classId: string, academicYearId?: string) {
-    const response = await apiClient.get(`/students/class/${classId}`, {
-      params: { academicYearId }
-    });
-    return response.data;
+  // Supprimer un étudiant
+  async deleteStudent(id: string) {
+    try {
+      const success = await dataService.deleteStudent(id);
+      return {
+        data: success,
+        success
+      };
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'étudiant:', error);
+      return {
+        data: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async getStudentStats(classId?: string) {
-    const response = await apiClient.get('/students/stats', {
-      params: { classId }
-    });
-    return response.data;
+  // Récupérer les étudiants d'une classe
+  async getStudentsByClass(classId: string) {
+    try {
+      const students = await dataService.getStudentsByClass(classId);
+      return {
+        data: students,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des étudiants par classe:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async uploadPhoto(id: string, file: File): Promise<{ photoUrl: string }> {
-    const formData = new FormData();
-    formData.append('photo', file);
-    
-    const response = await apiClient.post(`/students/${id}/photo`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+  // Rechercher des étudiants
+  async searchStudents(query: string) {
+    try {
+      const students = await dataService.searchStudents(query);
+      return {
+        data: students,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la recherche des étudiants:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async generateMatricule(): Promise<{ matricule: string }> {
-    const response = await apiClient.get('/students/matricule/generate');
-    return response.data;
+  // Récupérer les statistiques des étudiants
+  async getStudentStats() {
+    try {
+      const stats = await dataService.getStudentStats();
+      return {
+        data: stats,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques:', error);
+      return {
+        data: null,
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   },
 
-  async importStudents(file: File, classId: string, academicYearId: string): Promise<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('classId', classId);
-    formData.append('academicYearId', academicYearId);
-    
-    const response = await apiClient.post('/students/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
-  },
-
-  async exportStudents(filters?: StudentFilters): Promise<Blob> {
-    const response = await apiClient.get('/students/export', {
-      params: filters,
-      responseType: 'blob'
-    });
-    return response.data;
+  // Récupérer les étudiants avec leurs notes
+  async getStudentsWithGrades(classId?: string) {
+    try {
+      const students = await dataService.getStudentsWithGrades(classId);
+      return {
+        data: students,
+        success: true
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des étudiants avec notes:', error);
+      return {
+        data: [],
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
   }
 };

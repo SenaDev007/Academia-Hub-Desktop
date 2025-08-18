@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -101,12 +102,23 @@ export default defineConfig({
       }
     })
   ],
+  base: './',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
   server: {
     port: 5173,
     host: true,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
@@ -114,5 +126,14 @@ export default defineConfig({
         secure: false,
       }
     }
-  }
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+      '@electron': resolve(__dirname, './electron'),
+    },
+  },
+  define: {
+    'process.env': process.env,
+  },
 });
