@@ -4,6 +4,7 @@ import { CahierJournalEntry } from './types';
 import { NotificationService } from "./services/NotificationService";
 import CahierJournalView from './CahierJournalView';
 import CahierJournalForm from './CahierJournalForm';
+import { useReferentielScolaire } from '../../hooks/useReferentielScolaire';
 
 interface CahierJournalListProps {
   entries: CahierJournalEntry[];
@@ -15,8 +16,10 @@ const CahierJournalList: React.FC<CahierJournalListProps> = ({ entries, onUpdate
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMatiere, setFilterMatiere] = useState('');
   const [filterStatut, setFilterStatut] = useState('');
+  const [filterNiveau, setFilterNiveau] = useState('');
   const [selectedEntry, setSelectedEntry] = useState<CahierJournalEntry | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'view' | 'edit'>('list');
+  const { referentiel, loading: referentielLoading } = useReferentielScolaire();
 
   const filteredEntries = entries.filter(entry => {
     const matchesSearch = 
@@ -26,11 +29,10 @@ const CahierJournalList: React.FC<CahierJournalListProps> = ({ entries, onUpdate
     
     const matchesMatiere = !filterMatiere || entry.matiere === filterMatiere;
     const matchesStatut = !filterStatut || entry.statut === filterStatut;
+    const matchesNiveau = !filterNiveau || entry.classe === filterNiveau;
 
-    return matchesSearch && matchesMatiere && matchesStatut;
+    return matchesSearch && matchesMatiere && matchesStatut && matchesNiveau;
   });
-
-  const matieres = [...new Set(entries.map(entry => entry.matiere))];
 
   const getStatutLabel = (statut: string) => {
     switch (statut) {
@@ -54,14 +56,31 @@ const CahierJournalList: React.FC<CahierJournalListProps> = ({ entries, onUpdate
     }
   };
 
-  const handleEdit = (entry: CahierJournalEntry) => {
-    setSelectedEntry(entry);
-    setViewMode('edit');
+  const handleSendForValidation = (entry: CahierJournalEntry) => {
+    const updatedEntry = { ...entry, statut: 'en_attente_validation' as const };
+    onUpdateEntry(updatedEntry);
+    
+    alert(`✅ Séance envoyée au Directeur pour validation.`);
+  };
+
+  const handleExportPDF = (entry: CahierJournalEntry) => {
+    alert(`Export PDF de la séance "${entry.matiere} - ${entry.classe}" en cours...`);
+  };
+
+  const handleDelete = (entryId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette séance ?')) {
+      alert('Séance supprimée avec succès');
+    }
   };
 
   const handleView = (entry: CahierJournalEntry) => {
     setSelectedEntry(entry);
     setViewMode('view');
+  };
+
+  const handleEdit = (entry: CahierJournalEntry) => {
+    setSelectedEntry(entry);
+    setViewMode('edit');
   };
 
   const handleUpdateEntry = (updatedEntry: Omit<CahierJournalEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -75,74 +94,39 @@ const CahierJournalList: React.FC<CahierJournalListProps> = ({ entries, onUpdate
     }
   };
 
-  const handleSendForValidation = (entry: CahierJournalEntry) => {
-    // Mettre à jour le statut
-    const updatedEntry = { ...entry, statut: 'en_attente_validation' as const };
-    onUpdateEntry(updatedEntry);
-    
-    // Envoyer notification WhatsApp au directeur
-    const notificationService = NotificationService.getInstance();
-    const message = notificationService.generateWhatsAppMessage(
-      'submit',
-      entry,
-      'Enseignant',
-      'Séance soumise pour validation'
-    );
-    
-    notificationService.sendWhatsAppNotification(
-      '22997123456', // Numéro du directeur
-      message,
-      entry.id
-    ).then(result => {
-      if (result.success) {
-        alert(`✅ Séance envoyée au Directeur pour validation.\nNotification WhatsApp envoyée avec succès.`);
-      } else {
-        alert(`⚠️ Séance envoyée mais erreur d'envoi WhatsApp: ${result.error}`);
-      }
-    });
-  };
-
-  const handleDelete = (entryId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette séance ?')) {
-      // En production, appeler l'API de suppression
-      alert('Séance supprimée avec succès');
-    }
-  };
-
-  const handleExportPDF = (entry: CahierJournalEntry) => {
-    // Simuler l'export PDF
-    alert(`Export PDF de la séance "${entry.matiere} - ${entry.classe}" en cours...`);
-    
-    // En production, générer le PDF
-    setTimeout(() => {
-      alert('PDF généré avec succès !');
-    }, 1500);
-  };
-
-  if (viewMode === 'view' && selectedEntry) {
-    return (
-      <CahierJournalView
-        entry={selectedEntry}
-        onEdit={() => setViewMode('edit')}
-        onBack={() => setViewMode('list')}
-      />
-    );
-  }
-
   if (viewMode === 'edit' && selectedEntry) {
     return (
       <CahierJournalForm
         entry={selectedEntry}
         onSubmit={handleUpdateEntry}
-        onCancel={() => setViewMode('list')}
+        onCancel={() => {
+          setViewMode('list');
+          setSelectedEntry(null);
+        }}
       />
     );
   }
 
+  if (viewMode === 'view' && selectedEntry) {
+    return (
+      <CahierJournalView
+        entry={selectedEntry}
+        onBack={() => {
+          setViewMode('list');
+          setSelectedEntry(null);
+        }}
+        onEdit={() => handleEdit(selectedEntry)}
+      />
+    );
+  }
+
+  const matieres = [...new Set(entries.map(e => e.matiere))];
+  const niveaux = [...new Set(entries.map(e => e.classe))];
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -179,9 +163,28 @@ const CahierJournalList: React.FC<CahierJournalListProps> = ({ entries, onUpdate
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Toutes les matières</option>
-            {matieres.map(matiere => (
-              <option key={matiere} value={matiere}>{matiere}</option>
-            ))}
+            {referentielLoading ? (
+              <option disabled>Chargement...</option>
+            ) : (
+              referentiel.matieres.map(matiere => (
+                <option key={matiere} value={matiere}>{matiere}</option>
+              ))
+            )}
+          </select>
+
+          <select
+            value={filterNiveau}
+            onChange={(e) => setFilterNiveau(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Tous les niveaux</option>
+            {referentielLoading ? (
+              <option disabled>Chargement...</option>
+            ) : (
+              referentiel.niveaux.map(niveau => (
+                <option key={niveau} value={niveau}>{niveau}</option>
+              ))
+            )}
           </select>
 
           <select
@@ -195,6 +198,7 @@ const CahierJournalList: React.FC<CahierJournalListProps> = ({ entries, onUpdate
             <option value="realise">Réalisée</option>
             <option value="reporte">Reportée</option>
             <option value="valide">Validée</option>
+            <option value="en_attente_validation">En attente</option>
           </select>
 
           <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">

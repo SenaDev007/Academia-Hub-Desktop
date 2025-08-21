@@ -3,63 +3,33 @@ import { Bell, CheckCircle, Clock, AlertTriangle, Eye, MessageCircle, Filter, Se
 import { CahierJournalEntry, IValidationWorkflow } from './types';
 import { NotificationService } from "./services/NotificationService";
 import CahierJournalView from './CahierJournalView';
+import { useCahierJournalData } from '../../hooks/useCahierJournalData';
 
 interface DirectorDashboardProps {
   onBack: () => void;
 }
 
 const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ onBack }) => {
-  const [pendingEntries, setPendingEntries] = useState<CahierJournalEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<CahierJournalEntry | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Utiliser les données réelles depuis le hook
+  const { data: allEntries, loading, error } = useCahierJournalData();
+
+  // Filtrer les séances en attente de validation
+  const pendingEntries = allEntries.filter(entry => 
+    entry.statut === 'en_attente_validation' || 
+    entry.statut === 'valide' || 
+    entry.statut === 'reporte'
+  );
+
+  // Charger les notifications depuis localStorage
   const [notifications, setNotifications] = useState<any[]>([]);
 
-  // Simuler les données (en production, récupérer depuis l'API)
   useEffect(() => {
-    // Charger les séances en attente de validation
-    const mockEntries: CahierJournalEntry[] = [
-      {
-        id: '1',
-        date: '2025-01-16',
-        classe: 'CP1',
-        matiere: 'Français',
-        duree: 60,
-        objectifs: 'À la fin de cette séance, l\'élève sera capable de lire les syllabes simples avec les consonnes m, l, r.',
-        competences: ['Lecture', 'Écriture', 'Compréhension'],
-        deroulement: `1. Révision (5 min)\n- Rappel des lettres vues\n- Lecture de syllabes connues\n\n2. Présentation (15 min)\n- Introduction de la nouvelle consonne\n- Formation de syllabes\n- Lecture collective\n\n3. Application (20 min)\n- Exercices de lecture individuelle\n- Écriture sur ardoise\n- Jeux de syllabes\n\n4. Évaluation (5 min)\n- Questions orales\n- Vérification des acquis`,
-        supports: 'Tableau, ardoises, images, syllabaire, cahiers',
-        evaluation: 'Observation directe, questions orales, exercices écrits',
-        observations: 'Prévoir plus de temps pour les élèves en difficulté',
-        statut: 'en_attente_validation',
-        enseignant: 'Marie KOUASSI',
-        createdAt: '2025-01-15T10:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z'
-      },
-      {
-        id: '2',
-        date: '2025-01-16',
-        classe: 'CE1',
-        matiere: 'Mathématiques',
-        duree: 50,
-        objectifs: 'À la fin de cette séance, l\'élève sera capable de compter, lire et écrire les nombres de 0 à 20.',
-        competences: ['Numération', 'Calcul mental', 'Résolution de problèmes'],
-        deroulement: `1. Mise en situation (10 min)\n- Comptage d'objets concrets\n- Jeu de dénombrement\n\n2. Développement (25 min)\n- Présentation des nombres\n- Écriture chiffrée et littérale\n- Ordre croissant et décroissant\n\n3. Application (10 min)\n- Exercices pratiques\n- Manipulation d'objets\n\n4. Synthèse (5 min)\n- Récapitulatif\n- Évaluation formative`,
-        supports: 'Objets à compter, tableau numérique, cahiers, boulier',
-        evaluation: 'Exercices pratiques, observation, questions orales',
-        observations: '',
-        statut: 'en_attente_validation',
-        enseignant: 'Jean AKPOVI',
-        createdAt: '2025-01-15T14:30:00Z',
-        updatedAt: '2025-01-15T14:30:00Z'
-      }
-    ];
-
-    setPendingEntries(mockEntries);
-
-    // Charger les notifications
-    const mockNotifications = JSON.parse(localStorage.getItem('platform_notifications') || '[]');
-    setNotifications(mockNotifications);
+    const storedNotifications = JSON.parse(localStorage.getItem('platform_notifications') || '[]');
+    setNotifications(storedNotifications);
   }, []);
 
   const filteredEntries = pendingEntries.filter(entry => {
@@ -91,11 +61,15 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ onBack }) => {
       entry.id
     );
     
-    setPendingEntries(prev => prev.map(entry => 
+    // Mettre à jour les données réelles
+    const updatedEntries = allEntries.map(entry => 
       entry.id === workflowId 
         ? { ...entry, statut: 'valide' as const, updatedAt: new Date().toISOString() }
         : entry
-    ));
+    );
+    
+    // Mettre à jour le hook avec les données mises à jour
+    // (à implémenter)
     
     alert('✅ Séance approuvée. L\'enseignant a été notifié par WhatsApp.');
   };
@@ -118,11 +92,15 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ onBack }) => {
       entry.id
     );
     
-    setPendingEntries(prev => prev.map(entry => 
+    // Mettre à jour les données réelles
+    const updatedEntries = allEntries.map(entry => 
       entry.id === workflowId 
         ? { ...entry, statut: 'reporte' as const, updatedAt: new Date().toISOString() }
         : entry
-    ));
+    );
+    
+    // Mettre à jour le hook avec les données mises à jour
+    // (à implémenter)
     
     alert('❌ Séance rejetée. L\'enseignant a été notifié par WhatsApp.');
   };
@@ -145,11 +123,15 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ onBack }) => {
       entry.id
     );
     
-    setPendingEntries(prev => prev.map(entry => 
+    // Mettre à jour les données réelles
+    const updatedEntries = allEntries.map(entry => 
       entry.id === workflowId 
         ? { ...entry, statut: 'planifie' as const, updatedAt: new Date().toISOString() }
         : entry
-    ));
+    );
+    
+    // Mettre à jour le hook avec les données mises à jour
+    // (à implémenter)
     
     alert('🔄 Séance retournée pour révision. L\'enseignant a été notifié par WhatsApp.');
   };

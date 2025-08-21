@@ -35,7 +35,7 @@ import {
   User,
   Lightbulb
 } from 'lucide-react';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import { useDropzone } from 'react-dropzone';
 
 const EduCast: React.FC = () => {
@@ -954,7 +954,7 @@ const EduCast: React.FC = () => {
                       <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Questions fréquentes</h5>
                       <div className="space-y-2">
                         <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                          <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 font-medium">
                             "Pouvez-vous expliquer à nouveau la formule ?"
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -962,7 +962,7 @@ const EduCast: React.FC = () => {
                           </p>
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                          <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 font-medium">
                             "Quelle est la différence entre X et Y ?"
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -970,7 +970,7 @@ const EduCast: React.FC = () => {
                           </p>
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                          <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 font-medium">
                             "Pouvez-vous donner un exemple concret ?"
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1330,8 +1330,12 @@ const EduCast: React.FC = () => {
                     <div className="aspect-video bg-gray-100 dark:bg-gray-900 rounded-lg flex items-center justify-center mb-3">
                       <div className="text-center">
                         <Play className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Prévisualisation non disponible</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">La vidéo sera générée à l'étape suivante</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Prévisualisation non disponible
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          La vidéo sera générée à l'étape suivante
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">

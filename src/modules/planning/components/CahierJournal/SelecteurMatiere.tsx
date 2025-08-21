@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, BookOpen, Clock, Users, ChevronDown, Check } from 'lucide-react';
+import { useReferentielScolaire } from '../../hooks/useReferentielScolaire';
 
 interface Matiere {
   id: string;
@@ -16,7 +17,7 @@ interface Matiere {
 interface SelecteurMatiereProps {
   selectedMatiere?: string;
   selectedNiveau?: string;
-  onMatiereChange: (matiere: Matiere) => void;
+  onMatiereChange: (matiere: any) => void;
   onNiveauChange: (niveau: string) => void;
   className?: string;
 }
@@ -30,129 +31,25 @@ const SelecteurMatiere: React.FC<SelecteurMatiereProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { referentiel, loading } = useReferentielScolaire();
 
-  // Matières selon le système éducatif béninois
-  const matieres: Matiere[] = [
-    {
-      id: '1',
-      nom: 'Français',
-      code: 'FR',
-      couleur: 'bg-blue-500',
-      dureeStandard: 60,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Lecture', 'Écriture', 'Expression orale', 'Compréhension', 'Grammaire', 'Conjugaison', 'Orthographe', 'Vocabulaire'],
-      description: 'Apprentissage de la langue française : lecture, écriture, expression orale et écrite',
-      coefficient: 4
-    },
-    {
-      id: '2',
-      nom: 'Mathématiques',
-      code: 'MATH',
-      couleur: 'bg-green-500',
-      dureeStandard: 60,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Numération', 'Calcul mental', 'Calcul écrit', 'Géométrie', 'Mesures', 'Résolution de problèmes'],
-      description: 'Développement du raisonnement logique et des compétences mathématiques',
-      coefficient: 4
-    },
-    {
-      id: '3',
-      nom: 'Sciences et Technologie',
-      code: 'ST',
-      couleur: 'bg-purple-500',
-      dureeStandard: 45,
-      niveaux: ['CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Observation', 'Expérimentation', 'Classification', 'Analyse', 'Synthèse'],
-      description: 'Découverte du monde scientifique et technologique',
-      coefficient: 2
-    },
-    {
-      id: '4',
-      nom: 'Histoire-Géographie',
-      code: 'HG',
-      couleur: 'bg-orange-500',
-      dureeStandard: 45,
-      niveaux: ['CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Connaissance historique', 'Repérage spatial', 'Analyse de documents', 'Chronologie'],
-      description: 'Connaissance de l\'histoire et de la géographie du Bénin et du monde',
-      coefficient: 2
-    },
-    {
-      id: '5',
-      nom: 'Éducation Civique et Morale',
-      code: 'ECM',
-      couleur: 'bg-red-500',
-      dureeStandard: 30,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Civisme', 'Respect', 'Tolérance', 'Solidarité', 'Responsabilité'],
-      description: 'Formation du citoyen responsable et respectueux des valeurs',
-      coefficient: 2
-    },
-    {
-      id: '6',
-      nom: 'Arts Plastiques',
-      code: 'AP',
-      couleur: 'bg-pink-500',
-      dureeStandard: 45,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Créativité', 'Expression artistique', 'Techniques plastiques', 'Appréciation esthétique'],
-      description: 'Développement de la créativité et de l\'expression artistique',
-      coefficient: 1
-    },
-    {
-      id: '7',
-      nom: 'Éducation Physique et Sportive',
-      code: 'EPS',
-      couleur: 'bg-yellow-500',
-      dureeStandard: 60,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Motricité', 'Coordination', 'Endurance', 'Esprit d\'équipe', 'Fair-play'],
-      description: 'Développement physique et apprentissage des valeurs sportives',
-      coefficient: 2
-    },
-    {
-      id: '8',
-      nom: 'Langues Nationales',
-      code: 'LN',
-      couleur: 'bg-indigo-500',
-      dureeStandard: 45,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Expression orale', 'Compréhension', 'Culture locale', 'Tradition'],
-      description: 'Apprentissage et valorisation des langues nationales béninoises',
-      coefficient: 2
-    },
-    {
-      id: '9',
-      nom: 'Anglais',
-      code: 'ANG',
-      couleur: 'bg-teal-500',
-      dureeStandard: 45,
-      niveaux: ['CM1', 'CM2'],
-      competencesBase: ['Expression orale', 'Compréhension', 'Vocabulaire de base', 'Structures simples'],
-      description: 'Initiation à la langue anglaise',
-      coefficient: 2
-    },
-    {
-      id: '10',
-      nom: 'Éducation Musicale',
-      code: 'MUS',
-      couleur: 'bg-cyan-500',
-      dureeStandard: 30,
-      niveaux: ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'],
-      competencesBase: ['Chant', 'Rythme', 'Écoute musicale', 'Expression corporelle'],
-      description: 'Développement de la sensibilité musicale et artistique',
-      coefficient: 1
-    }
-  ];
-
-  const niveaux = ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'];
-
-  const filteredMatieres = matieres.filter(matiere =>
+  const filteredMatieres = referentiel.matieres.filter(matiere =>
     matiere.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
     matiere.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const selectedMatiereData = matieres.find(m => m.nom === selectedMatiere);
+  const selectedMatiereData = referentiel.matieres.find(m => m.nom === selectedMatiere);
+
+  if (loading) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-10 bg-gray-200 rounded mb-2"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -254,7 +151,7 @@ const SelecteurMatiere: React.FC<SelecteurMatiereProps> = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Sélectionner un niveau</option>
-          {niveaux
+          {referentiel.niveaux
             .filter(niveau => !selectedMatiereData || selectedMatiereData.niveaux.includes(niveau))
             .map(niveau => (
               <option key={niveau} value={niveau}>{niveau}</option>

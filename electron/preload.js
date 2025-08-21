@@ -67,6 +67,46 @@ contextBridge.exposeInMainWorld('electronAPI', {
     retry: (workflowId) => ipcRenderer.invoke('validation:retry', workflowId),
   },
 
+  // Planning Service
+  planning: {
+    getClasses: (schoolId) => ipcRenderer.invoke('planning:getClasses', schoolId),
+    getClassById: (classId) => ipcRenderer.invoke('planning:getClassById', classId),
+    createClass: (classData) => ipcRenderer.invoke('planning:createClass', classData),
+    updateClass: (classId, classData) => ipcRenderer.invoke('planning:updateClass', classId, classData),
+    deleteClass: (classId) => ipcRenderer.invoke('planning:deleteClass', classId),
+    
+    getRooms: (schoolId) => ipcRenderer.invoke('planning:getRooms', schoolId),
+    getRoomById: (roomId) => ipcRenderer.invoke('planning:getRoomById', roomId),
+    createRoom: (roomData) => ipcRenderer.invoke('planning:createRoom', roomData),
+    updateRoom: (roomId, roomData) => ipcRenderer.invoke('planning:updateRoom', roomId, roomData),
+    deleteRoom: (roomId) => ipcRenderer.invoke('planning:deleteRoom', roomId),
+    
+    getSubjects: (schoolId) => ipcRenderer.invoke('planning:getSubjects', schoolId),
+    getSubjectById: (subjectId) => ipcRenderer.invoke('planning:getSubjectById', subjectId),
+    createSubject: (subjectData) => ipcRenderer.invoke('planning:createSubject', subjectData),
+    updateSubject: (subjectId, subjectData) => ipcRenderer.invoke('planning:updateSubject', subjectId, subjectData),
+    deleteSubject: (subjectId) => ipcRenderer.invoke('planning:deleteSubject', subjectId),
+    
+    getTeachers: (schoolId) => ipcRenderer.invoke('planning:getTeachers', schoolId),
+    getTeacherById: (teacherId) => ipcRenderer.invoke('planning:getTeacherById', teacherId),
+    
+    getScheduleEntries: (filters) => ipcRenderer.invoke('planning:getScheduleEntries', filters),
+    createScheduleEntry: (entryData) => ipcRenderer.invoke('planning:createScheduleEntry', entryData),
+    updateScheduleEntry: (entryId, entryData) => ipcRenderer.invoke('planning:updateScheduleEntry', entryId, entryData),
+    deleteScheduleEntry: (entryId) => ipcRenderer.invoke('planning:deleteScheduleEntry', entryId),
+    
+    getBreaks: (schoolId) => ipcRenderer.invoke('planning:getBreaks', schoolId),
+    createBreak: (breakData) => ipcRenderer.invoke('planning:createBreak', breakData),
+    updateBreak: (breakId, breakData) => ipcRenderer.invoke('planning:updateBreak', breakId, breakData),
+    deleteBreak: (breakId) => ipcRenderer.invoke('planning:deleteBreak', breakId),
+    
+    getWorkHoursConfig: (schoolId) => ipcRenderer.invoke('planning:getWorkHoursConfig', schoolId),
+    createWorkHoursConfig: (configData) => ipcRenderer.invoke('planning:createWorkHoursConfig', configData),
+    updateWorkHoursConfig: (configId, configData) => ipcRenderer.invoke('planning:updateWorkHoursConfig', configId, configData),
+    
+    getPlanningStats: (schoolId) => ipcRenderer.invoke('planning:getPlanningStats', schoolId),
+  },
+
   // Offline sync
   sync: {
     getStatus: () => ipcRenderer.invoke('sync:get-status'),

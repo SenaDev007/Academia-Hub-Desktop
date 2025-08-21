@@ -1,4 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';
+// Utiliser une importation compatible avec Vite/Electron
+// import { v4 as uuidv4 } from 'uuid';
 
 // Types pour le service dataService
 export interface Student {
@@ -142,12 +143,21 @@ interface ElectronAPI {
   };
 }
 
+// Alternative UUID generation compatible avec Vite
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback simple pour le développement
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 // Vérifier si nous sommes dans Electron
-const isElectron = !!(window as any).electronAPI;
+const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
 
 class DataService {
   private isInitialized = false;
-  private electronAPI: ElectronAPI | null = null;
+  private electronAPI: any = null;
 
   constructor() {
     if (isElectron) {
@@ -155,17 +165,8 @@ class DataService {
     }
   }
 
-  async init() {
-    if (!isElectron) {
-      console.warn('DataService: Running in web mode, using mock data');
-      return;
-    }
-    this.isInitialized = true;
-    console.log('DataService initialized');
-  }
-
   private generateId(): string {
-    return uuidv4();
+    return generateUUID();
   }
 
   private getCurrentTimestamp(): string {

@@ -1,6 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FormModal from './FormModal';
 import { Save, MapPin, Calendar, Clock, BookOpen, User } from 'lucide-react';
+import { useReferentielScolaire } from '../../modules/planning/hooks/useReferentielScolaire';
+
+interface Room {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number;
+}
+
+interface Teacher {
+  id: string;
+  name: string;
+  subject: string;
+}
 
 interface RoomReservationModalProps {
   isOpen: boolean;
@@ -8,10 +22,6 @@ interface RoomReservationModalProps {
   onSave: (reservationData: any) => void;
   reservationData?: any;
   isEdit?: boolean;
-  rooms?: any[];
-  teachers?: any[];
-  subjects?: any[];
-  classes?: any[];
 }
 
 const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
@@ -19,46 +29,11 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
   onClose,
   onSave,
   reservationData,
-  isEdit = false,
-  rooms = [],
-  teachers = [],
-  subjects = [],
-  classes = []
+  isEdit = false
 }) => {
-  const defaultRooms = [
-    { id: 'ROOM-001', name: 'Salle 101', type: 'Salle de classe', capacity: 30 },
-    { id: 'ROOM-002', name: 'Salle 102', type: 'Salle de classe', capacity: 30 },
-    { id: 'LAB-001', name: 'Laboratoire SVT', type: 'Laboratoire', capacity: 24 },
-    { id: 'LAB-002', name: 'Laboratoire Physique', type: 'Laboratoire', capacity: 24 },
-    { id: 'ROOM-003', name: 'Salle informatique', type: 'Salle spécialisée', capacity: 20 }
-  ];
-
-  const defaultTeachers = [
-    { id: 'TCH-001', name: 'M. Dubois', subject: 'Mathématiques' },
-    { id: 'TCH-002', name: 'Mme Martin', subject: 'Français' },
-    { id: 'TCH-003', name: 'M. Laurent', subject: 'Histoire-Géographie' }
-  ];
-
-  const defaultSubjects = [
-    { id: 'SUB-001', name: 'Mathématiques', code: 'MATH' },
-    { id: 'SUB-002', name: 'Français', code: 'FR' },
-    { id: 'SUB-003', name: 'Histoire-Géographie', code: 'HIST-GEO' },
-    { id: 'SUB-004', name: 'Sciences Physiques', code: 'PHYS' },
-    { id: 'SUB-005', name: 'SVT', code: 'SVT' }
-  ];
-
-  const defaultClasses = [
-    { id: 'CLS-001', name: '6ème A' },
-    { id: 'CLS-002', name: '5ème B' },
-    { id: 'CLS-003', name: '4ème A' },
-    { id: 'CLS-004', name: '3ème A' },
-    { id: 'CLS-005', name: '2nde B' }
-  ];
-
-  const allRooms = rooms.length > 0 ? rooms : defaultRooms;
-  const allTeachers = teachers.length > 0 ? teachers : defaultTeachers;
-  const allSubjects = subjects.length > 0 ? subjects : defaultSubjects;
-  const allClasses = classes.length > 0 ? classes : defaultClasses;
+  const { referentiel, loading } = useReferentielScolaire();
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   const [formData, setFormData] = useState({
     title: reservationData?.title || '',
@@ -79,6 +54,39 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
     notes: reservationData?.notes || ''
   });
 
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const demoRooms: Room[] = [
+          { id: 'ROOM-001', name: 'Salle 101', type: 'Salle de classe', capacity: 30 },
+          { id: 'ROOM-002', name: 'Salle 102', type: 'Salle de classe', capacity: 30 },
+          { id: 'LAB-001', name: 'Laboratoire SVT', type: 'Laboratoire', capacity: 24 },
+          { id: 'LAB-002', name: 'Laboratoire Physique', type: 'Laboratoire', capacity: 24 },
+          { id: 'ROOM-003', name: 'Salle informatique', type: 'Salle spécialisée', capacity: 20 }
+        ];
+        setRooms(demoRooms);
+      } catch (error) {
+        console.error('Erreur lors du chargement des salles:', error);
+      }
+    };
+
+    const fetchTeachers = async () => {
+      try {
+        const demoTeachers: Teacher[] = [
+          { id: 'TCH-001', name: 'M. Dubois', subject: 'Mathématiques' },
+          { id: 'TCH-002', name: 'Mme Martin', subject: 'Français' },
+          { id: 'TCH-003', name: 'M. Laurent', subject: 'Histoire-Géographie' }
+        ];
+        setTeachers(demoTeachers);
+      } catch (error) {
+        console.error('Erreur lors du chargement des enseignants:', error);
+      }
+    };
+
+    fetchRooms();
+    fetchTeachers();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -93,12 +101,26 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
     onClose();
   };
 
-  // Vérifier si la salle est disponible
   const checkRoomAvailability = () => {
-    // Dans une implémentation réelle, vous feriez une vérification côté serveur
-    // Ici, on simule une vérification
     return true;
   };
+
+  if (loading) {
+    return (
+      <FormModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={isEdit ? "Modifier une réservation" : "Nouvelle réservation de salle"}
+        size="lg"
+      >
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </FormModal>
+    );
+  }
 
   return (
     <FormModal
@@ -164,7 +186,7 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">Sélectionner une salle</option>
-                {allRooms.map(room => (
+                {rooms.map(room => (
                   <option key={room.id} value={room.id}>{room.name} ({room.type}, {room.capacity} places)</option>
                 ))}
               </select>
@@ -183,7 +205,7 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">Sélectionner un enseignant</option>
-                {allTeachers.map(teacher => (
+                {teachers.map(teacher => (
                   <option key={teacher.id} value={teacher.id}>{teacher.name} ({teacher.subject})</option>
                 ))}
               </select>
@@ -202,7 +224,7 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">Sélectionner une matière</option>
-                {allSubjects.map(subject => (
+                {referentiel.matieres.map(subject => (
                   <option key={subject.id} value={subject.id}>{subject.name} ({subject.code})</option>
                 ))}
               </select>
@@ -221,8 +243,8 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">Sélectionner une classe</option>
-                {allClasses.map(cls => (
-                  <option key={cls.id} value={cls.id}>{cls.name}</option>
+                {referentiel.niveaux.map(niveau => (
+                  <option key={niveau} value={niveau}>{niveau}</option>
                 ))}
               </select>
             </div>
@@ -384,7 +406,7 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-blue-800 dark:text-blue-300">Salle:</span>
                 <span className="font-bold text-blue-900 dark:text-blue-200">
-                  {formData.roomId ? allRooms.find(r => r.id === formData.roomId)?.name || 'Non sélectionnée' : 'Non sélectionnée'}
+                  {formData.roomId ? rooms.find(r => r.id === formData.roomId)?.name || 'Non sélectionnée' : 'Non sélectionnée'}
                 </span>
               </div>
               
@@ -403,21 +425,21 @@ const RoomReservationModal: React.FC<RoomReservationModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-blue-800 dark:text-blue-300">Enseignant:</span>
                 <span className="font-medium text-blue-900 dark:text-blue-200">
-                  {formData.teacherId ? allTeachers.find(t => t.id === formData.teacherId)?.name || 'Non sélectionné' : 'Non sélectionné'}
+                  {formData.teacherId ? teachers.find(t => t.id === formData.teacherId)?.name || 'Non sélectionné' : 'Non sélectionné'}
                 </span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-blue-800 dark:text-blue-300">Matière:</span>
                 <span className="font-medium text-blue-900 dark:text-blue-200">
-                  {formData.subjectId ? allSubjects.find(s => s.id === formData.subjectId)?.name || 'Non sélectionnée' : 'Non sélectionnée'}
+                  {formData.subjectId ? referentiel.matieres.find(s => s.id === formData.subjectId)?.name || 'Non sélectionnée' : 'Non sélectionnée'}
                 </span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-blue-800 dark:text-blue-300">Classe:</span>
                 <span className="font-medium text-blue-900 dark:text-blue-200">
-                  {formData.classId ? allClasses.find(c => c.id === formData.classId)?.name || 'Non sélectionnée' : 'Non sélectionnée'}
+                  {formData.classId ? referentiel.niveaux.find(n => n === formData.classId) || 'Non sélectionnée' : 'Non sélectionnée'}
                 </span>
               </div>
             </div>

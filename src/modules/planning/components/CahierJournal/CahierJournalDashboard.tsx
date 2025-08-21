@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, BookOpen, Clock, CheckCircle, AlertCircle, Users, FileText, Layout, BookTemplate as Template, Download, UserCheck } from 'lucide-react';
 import CahierJournalForm from './CahierJournalForm';
 import CahierJournalList from './CahierJournalList';
@@ -7,86 +7,93 @@ import DirectorDashboard from './DirectorDashboard';
 import PlanificationSemaine from './PlanificationSemaine';
 import TemplateSelection from './TemplateSelection';
 import { CahierJournalEntry } from '../types';
+import { useCahierJournalData, createCahierJournalEntry, updateCahierJournalEntry, duplicateCahierJournalEntry, createCahierJournalEntryFromTemplate } from '../../hooks/useCahierJournalData';
 
 const CahierJournalDashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<'dashboard' | 'create' | 'list' | 'calendar' | 'director' | 'planning' | 'templates'>('dashboard');
-  const [currentUserRole, setCurrentUserRole] = useState<'enseignant' | 'directeur'>('enseignant'); // Simuler le rôle utilisateur
-  const [entries, setEntries] = useState<CahierJournalEntry[]>([
-    {
-      id: '1',
-      date: '2025-01-15',
-      classe: 'CP1',
-      matiere: 'Français',
-      duree: 60,
-      objectifs: 'Apprendre à lire les syllabes simples',
-      competences: ['Lecture', 'Compréhension'],
-      deroulement: 'Introduction, exercices pratiques, évaluation',
-      supports: 'Tableau, cahiers, images',
-      evaluation: 'Questions orales',
-      observations: '',
-      statut: 'planifie',
-      enseignant: 'Marie KOUASSI',
-      createdAt: '2025-01-14T10:00:00Z',
-      updatedAt: '2025-01-14T10:00:00Z'
-    }
-  ]);
+  const [currentUserRole, setCurrentUserRole] = useState<'enseignant' | 'directeur'>(localStorage.getItem('role') as 'enseignant' | 'directeur' || 'enseignant');
+  
+  // Utiliser les données réelles depuis le hook
+  const { data: entries, loading, error, refetch } = useCahierJournalData();
+
+  // Notifications dynamiques
+  const notifications = {
+    validationEnAttente: entries.filter(e => e.statut === 'en_attente_validation').length,
+    seancesDemain: entries.filter(e => {
+      const demain = new Date();
+      demain.setDate(demain.getDate() + 1);
+      return e.date === demain.toISOString().split('T')[0];
+    }).length,
+    seancesApprouvees: entries.filter(e => e.statut === 'valide').length
+  };
 
   const stats = {
     totalSeances: entries.length,
     planifiees: entries.filter(e => e.statut === 'planifie').length,
-    enCours: entries.filter(e => e.statut === 'en_cours').length,
     realisees: entries.filter(e => e.statut === 'realise').length,
-    reportees: entries.filter(e => e.statut === 'reporte').length
+    annulees: entries.filter(e => e.statut === 'annule').length,
+    reportees: entries.filter(e => e.statut === 'reporte').length,
+    enAttenteValidation: entries.filter(e => e.statut === 'en_attente_validation').length
   };
 
-  const handleCreateEntry = (entry: Omit<CahierJournalEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newEntry: CahierJournalEntry = {
-      ...entry,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setEntries([...entries, newEntry]);
-    setActiveView('dashboard');
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Erreur de chargement</h3>
+        <p className="text-gray-600">{error}</p>
+      </div>
+    );
+  }
+
+  const handleCreateEntry = async (entry: Omit<CahierJournalEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newEntry = await createCahierJournalEntry(entry);
+      // Rafraîchir les données après création
+      refetch();
+      setActiveView('dashboard');
+    } catch (error) {
+      console.error('Erreur lors de la création:', error);
+    }
   };
 
-  const handleUpdateEntry = (updatedEntry: CahierJournalEntry) => {
-    setEntries(entries.map(entry => 
-      entry.id === updatedEntry.id 
-        ? { ...updatedEntry, updatedAt: new Date().toISOString() }
-        : entry
-    ));
+  const handleUpdateEntry = async (updatedEntry: CahierJournalEntry) => {
+    try {
+      await updateCahierJournalEntry(updatedEntry);
+      // Rafraîchir les données après mise à jour
+      refetch();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+    }
   };
 
-  const handleDuplicateEntry = (entry: CahierJournalEntry) => {
-    const duplicatedEntry: CahierJournalEntry = {
-      ...entry,
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      statut: 'planifie',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setEntries([...entries, duplicatedEntry]);
+  const handleDuplicateEntry = async (entry: CahierJournalEntry) => {
+    try {
+      await duplicateCahierJournalEntry(entry);
+      // Rafraîchir les données après duplication
+      refetch();
+    } catch (error) {
+      console.error('Erreur lors de la duplication:', error);
+    }
   };
 
-  const handleSelectTemplate = (template: any) => {
-    // Convertir le template en entrée de cahier journal
-    const newEntry = {
-      date: new Date().toISOString().split('T')[0],
-      classe: '',
-      matiere: template.matiere,
-      duree: template.duree,
-      objectifs: template.objectifs,
-      competences: template.competences,
-      deroulement: template.deroulement,
-      supports: template.supports,
-      evaluation: template.evaluation,
-      observations: '',
-      statut: 'planifie' as const,
-      enseignant: 'Marie KOUASSI'
-    };
-    handleCreateEntry(newEntry);
+  const handleSelectTemplate = async (template: any) => {
+    try {
+      await createCahierJournalEntryFromTemplate(template);
+      // Rafraîchir les données après création depuis template
+      refetch();
+      setActiveView('create');
+    } catch (error) {
+      console.error('Erreur lors de la création depuis template:', error);
+    }
   };
 
   if (activeView === 'create') {
@@ -163,7 +170,10 @@ const CahierJournalDashboard: React.FC = () => {
               <span className="text-sm text-gray-600">Rôle:</span>
               <select
                 value={currentUserRole}
-                onChange={(e) => setCurrentUserRole(e.target.value as 'enseignant' | 'directeur')}
+                onChange={(e) => {
+                  setCurrentUserRole(e.target.value as 'enseignant' | 'directeur');
+                  localStorage.setItem('role', e.target.value);
+                }}
                 className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="enseignant">Enseignant</option>
@@ -329,27 +339,33 @@ const CahierJournalDashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Validation en attente</p>
-                <p className="text-xs text-gray-600">2 séances en attente de validation par le directeur</p>
+            {notifications.validationEnAttente > 0 && (
+              <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Validation en attente</p>
+                  <p className="text-xs text-gray-600">{notifications.validationEnAttente} séance(s) en attente de validation</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Séance approuvée</p>
-                <p className="text-xs text-gray-600">Votre séance de Mathématiques a été approuvée</p>
+            )}
+            {notifications.seancesDemain > 0 && (
+              <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-lg">
+                <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Rappel</p>
+                  <p className="text-xs text-gray-600">{notifications.seancesDemain} séance(s) à préparer pour demain</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-lg">
-              <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Rappel</p>
-                <p className="text-xs text-gray-600">3 séances à préparer pour demain</p>
+            )}
+            {notifications.seancesApprouvees > 0 && (
+              <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Séance approuvée</p>
+                  <p className="text-xs text-gray-600">{notifications.seancesApprouvees} séance(s) approuvée(s)</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

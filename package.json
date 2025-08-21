@@ -1,131 +1,79 @@
 {
   "name": "academia-hub-desktop",
-  "private": true,
   "version": "1.0.0",
-  "description": "Academia Hub -Application desktop pour la gestion scolaire",
-  "main": "electron/main.js",
-  "author": "YEHI OR Tech",
-  "license": "MIT",
+  "description": "Application de gestion scolaire complète",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "electron:pack": "npm run build && electron-builder --dir",
-    "electron:dist": "npm run build && electron-builder --publish=never",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "postinstall": "electron-builder install-app-deps",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "preview": "vite preview",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "build-electron": "npm run build && electron-builder",
+    "dist": "npm run build && electron-builder --publish=never",
+    "postinstall": "electron-builder install-app-deps",
+    "clean": "npm uninstall better-sqlite3 && npm install"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.1",
-    "lucide-react": "^0.263.1",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^1.14.0",
-    "date-fns": "^2.30.0",
-    "react-hook-form": "^7.45.4",
-    "react-query": "^3.39.3",
-    "react-hot-toast": "^2.4.1",
-    "framer-motion": "^10.16.1",
-    "recharts": "^2.8.0",
-    "react-icons": "^4.10.1",
-    "electron-store": "^8.1.0",
-    "electron-log": "^4.4.8",
-    "electron-updater": "^6.1.4",
-    "sqlite3": "^5.1.6",
-    "better-sqlite3": "^8.5.0",
-    "uuid": "^9.0.0",
-    "jspdf": "^2.5.1",
-    "html2canvas": "^1.4.1",
-    "xlsx": "^0.18.5"
+    "@headlessui/react": "^2.1.2",
+    "@heroicons/react": "^2.1.5",
+    "@react-pdf/renderer": "^4.3.0",
+    "@types/uuid": "^10.0.0",
+    "axios": "^1.7.2",
+    "date-fns": "^3.6.0",
+    "jspdf": "^3.0.1",
+    "lucide-react": "^0.424.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^14.3.8",
+    "react-player": "^3.3.1",
+    "react-router-dom": "^6.25.1",
+    "recharts": "^2.12.7",
+    "uuid": "^10.0.0",
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@types/uuid": "^9.0.2",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "@vitejs/plugin-react": "^4.0.3",
-    "autoprefixer": "^10.4.14",
-    "concurrently": "^8.2.0",
-    "electron": "^26.1.0",
-    "electron-builder": "^24.6.3",
-    "eslint": "^8.45.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
-    "postcss": "^8.4.27",
-    "tailwindcss": "^3.3.3",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5",
-    "vite-plugin-electron": "^0.14.0",
-    "vite-plugin-electron-renderer": "^0.14.5",
-    "wait-on": "^7.0.1"
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "electron": "^26.6.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.4",
+    "vite-plugin-pwa": "^1.0.3",
+    "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.yehiortech.academia-hub-desktop",
-    "productName": "Academia Hub Pro",
+    "appId": "com.academiahub.desktop",
+    "productName": "Academia Hub",
     "directories": {
       "output": "dist-electron"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "node_modules/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "public",
-        "to": "public",
-        "filter": ["**/*"]
-      }
-    ],
     "mac": {
-      "icon": "public/icon.icns",
       "category": "public.app-category.education",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["x64", "arm64"]
-        }
-      ]
+      "target": "dmg"
     },
     "win": {
-      "icon": "public/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64", "ia32"]
-        }
-      ]
+      "target": "nsis"
     },
     "linux": {
-      "icon": "public/icon.png",
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": ["x64"]
-        },
-        {
-          "target": "deb",
-          "arch": ["x64"]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Academia Hub Pro"
+      "target": "AppImage"
     }
-  },
-  "homepage": "./"
+  }
 }

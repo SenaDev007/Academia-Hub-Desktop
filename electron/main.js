@@ -4,11 +4,13 @@ const fs = require('fs').promises;
 const DatabaseManager = require('./database');
 const ValidationService = require('./services/validationService');
 const SyncService = require('./services/syncService');
+const PlanningService = require('./services/planningService');
 
 // Initialize database and services
 let db;
 let validationService;
 let syncService;
+let planningService;
 
 // Window reference
 let mainWindow;
@@ -73,6 +75,7 @@ app.whenReady().then(async () => {
     // Initialize services
     validationService = new ValidationService(db);
     syncService = new SyncService(db);
+    planningService = new PlanningService(db);
     await syncService.initialize();
 
     console.log('Database and services initialized successfully');
@@ -153,6 +156,297 @@ ipcMain.handle('db-select', async (event, table, where = {}, orderBy = null) => 
     return { success: true, data: result };
   } catch (error) {
     console.error('Database select error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handlers for Planning Service
+ipcMain.handle('planning:getClasses', async (event, schoolId) => {
+  try {
+    const result = await planningService.getClasses(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get classes error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getClassById', async (event, classId) => {
+  try {
+    const result = await planningService.getClassById(classId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get class by id error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:createClass', async (event, classData) => {
+  try {
+    const result = await planningService.createClass(classData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Create class error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:updateClass', async (event, classId, classData) => {
+  try {
+    const result = await planningService.updateClass(classId, classData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Update class error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:deleteClass', async (event, classId) => {
+  try {
+    const result = await planningService.deleteClass(classId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Delete class error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getRooms', async (event, schoolId) => {
+  try {
+    const result = await planningService.getRooms(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get rooms error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getRoomById', async (event, roomId) => {
+  try {
+    const result = await planningService.getRoomById(roomId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get room by id error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:createRoom', async (event, roomData) => {
+  try {
+    const result = await planningService.createRoom(roomData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Create room error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:updateRoom', async (event, roomId, roomData) => {
+  try {
+    const result = await planningService.updateRoom(roomId, roomData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Update room error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:deleteRoom', async (event, roomId) => {
+  try {
+    const result = await planningService.deleteRoom(roomId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Delete room error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getSubjects', async (event, schoolId) => {
+  try {
+    const result = await planningService.getSubjects(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get subjects error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getSubjectById', async (event, subjectId) => {
+  try {
+    const result = await planningService.getSubjectById(subjectId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get subject by id error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:createSubject', async (event, subjectData) => {
+  try {
+    const result = await planningService.createSubject(subjectData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Create subject error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:updateSubject', async (event, subjectId, subjectData) => {
+  try {
+    const result = await planningService.updateSubject(subjectId, subjectData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Update subject error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:deleteSubject', async (event, subjectId) => {
+  try {
+    const result = await planningService.deleteSubject(subjectId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Delete subject error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getTeachers', async (event, schoolId) => {
+  try {
+    const result = await planningService.getTeachers(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get teachers error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getTeacherById', async (event, teacherId) => {
+  try {
+    const result = await planningService.getTeacherById(teacherId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get teacher by id error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getScheduleEntries', async (event, filters) => {
+  try {
+    const result = await planningService.getScheduleEntries(filters);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get schedule entries error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:createScheduleEntry', async (event, entryData) => {
+  try {
+    const result = await planningService.createScheduleEntry(entryData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Create schedule entry error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:updateScheduleEntry', async (event, entryId, entryData) => {
+  try {
+    const result = await planningService.updateScheduleEntry(entryId, entryData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Update schedule entry error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:deleteScheduleEntry', async (event, entryId) => {
+  try {
+    const result = await planningService.deleteScheduleEntry(entryId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Delete schedule entry error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getBreaks', async (event, schoolId) => {
+  try {
+    const result = await planningService.getBreaks(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get breaks error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:createBreak', async (event, breakData) => {
+  try {
+    const result = await planningService.createBreak(breakData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Create break error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:updateBreak', async (event, breakId, breakData) => {
+  try {
+    const result = await planningService.updateBreak(breakId, breakData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Update break error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:deleteBreak', async (event, breakId) => {
+  try {
+    const result = await planningService.deleteBreak(breakId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Delete break error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getWorkHoursConfig', async (event, schoolId) => {
+  try {
+    const result = await planningService.getWorkHoursConfig(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get work hours config error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:createWorkHoursConfig', async (event, configData) => {
+  try {
+    const result = await planningService.createWorkHoursConfig(configData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Create work hours config error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:updateWorkHoursConfig', async (event, configId, configData) => {
+  try {
+    const result = await planningService.updateWorkHoursConfig(configId, configData);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Update work hours config error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('planning:getPlanningStats', async (event, schoolId) => {
+  try {
+    const result = await planningService.getPlanningStats(schoolId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Get planning stats error:', error);
     return { success: false, error: error.message };
   }
 });

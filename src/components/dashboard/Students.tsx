@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { 
   Plus, 
   Search, 
@@ -22,6 +23,7 @@ import {
   BookOpen,
   Shield
 } from 'lucide-react';
+
 import StudentModal from '../modals/StudentModal';
 import AbsenceModal from '../modals/AbsenceModal';
 import DisciplineModal from '../modals/DisciplineModal';
@@ -30,6 +32,34 @@ import DocumentGenerationModal from '../modals/DocumentGenerationModal';
 import TrombinoscopeModal from '../modals/TrombinoscopeModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import AlertModal from '../modals/AlertModal';
+
+import { studentsService } from '../../services/api/students';
+import { classService } from '../../services/api/classes';
+
+interface Student {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  address?: string;
+  parentName?: string;
+  parentPhone?: string;
+  classId?: string;
+  className?: string;
+  enrollmentDate?: string;
+  status: 'active' | 'inactive' | 'graduated';
+  photo?: string;
+  medicalInfo?: string;
+  registrationNumber?: string;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  level: string;
+}
 
 const Students: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');

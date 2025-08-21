@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Plus, 
@@ -34,6 +34,7 @@ import CahierJournalDashboard from '../../modules/planning/components/CahierJour
 import FichesPedagogiquesDashboard from '../../modules/planning/components/FichesPedagogiques/FichesPedagogiquesDashboard';
 import CahierTexteApp from '../../modules/planning/components/CahierTextes/CahierTexteApp';
 import EmploiDuTempsModern from './EmploiDuTempsModern';
+import { usePlanningData } from '../../hooks/usePlanningData';
 
 const Planning: React.FC = () => {
   const [activeTab, setActiveTab] = useState('schedule');
@@ -54,118 +55,29 @@ const Planning: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // Add missing state variables
-  const [breaks, setBreaks] = useState([
-    {
-      name: 'Récréation matin',
-      type: 'recreation',
-      startTime: '10:00',
-      endTime: '10:15',
-      duration: 15,
-      levels: ['Maternelle', 'Primaire']
-    },
-    {
-      name: 'Pause déjeuner',
-      type: 'break',
-      startTime: '12:00',
-      endTime: '13:00',
-      duration: 60,
-      levels: ['Tous niveaux']
-    },
-    {
-      name: 'Récréation après-midi',
-      type: 'recreation',
-      startTime: '15:00',
-      endTime: '15:15',
-      duration: 15,
-      levels: ['Maternelle', 'Primaire']
-    }
-  ]);
+  const {
+    classes,
+    rooms,
+    subjects,
+    teachers,
+    schedule,
+    breaks,
+    workHours,
+    stats,
+    loading,
+    error,
+    createClass,
+    updateClass,
+    deleteClass,
+    createRoom,
+    updateRoom,
+    createSubject,
+    createScheduleEntry,
+    saveBreaks,
+    saveWorkHours
+  } = usePlanningData();
 
-  const [workHours, setWorkHours] = useState({
-    startTime: '08:00',
-    endTime: '17:00',
-    lunchBreakStart: '12:00',
-    lunchBreakEnd: '13:00',
-    courseDuration: 60,
-    breakBetweenCourses: 5,
-    workDays: [1, 2, 3, 4, 5, 6]
-  });
-
-  const planningStats = [
-    {
-      title: 'Classes actives',
-      value: '24',
-      change: '+2',
-      icon: Users,
-      color: 'from-blue-600 to-blue-700'
-    },
-    {
-      title: 'Enseignants',
-      value: '45',
-      change: '+3',
-      icon: User,
-      color: 'from-green-600 to-green-700'
-    },
-    {
-      title: 'Salles disponibles',
-      value: '18',
-      change: '+1',
-      icon: Building,
-      color: 'from-purple-600 to-purple-700'
-    },
-    {
-      title: 'Taux d\'occupation',
-      value: '87%',
-      change: '+5%',
-      icon: BarChart3,
-      color: 'from-orange-600 to-orange-700'
-    }
-  ];
-
-  const classes = [
-    { id: 'CLS-001', name: '6ème A', level: 'Collège', students: 28, mainTeacher: 'M. Dubois', room: 'Salle 101' },
-    { id: 'CLS-002', name: '5ème B', level: 'Collège', students: 25, mainTeacher: 'Mme Martin', room: 'Salle 102' },
-    { id: 'CLS-003', name: '4ème A', level: 'Collège', students: 30, mainTeacher: 'M. Laurent', room: 'Salle 103' },
-    { id: 'CLS-004', name: '3ème A', level: 'Collège', students: 27, mainTeacher: 'Mme Dubois', room: 'Salle 104' },
-    { id: 'CLS-005', name: '2nde B', level: 'Lycée', students: 32, mainTeacher: 'M. Martin', room: 'Salle 201' },
-    { id: 'CLS-006', name: '1ère C', level: 'Lycée', students: 29, mainTeacher: 'Mme Laurent', room: 'Salle 202' },
-    { id: 'CLS-007', name: 'Terminale S', level: 'Lycée', students: 26, mainTeacher: 'M. Dubois', room: 'Salle 203' }
-  ];
-
-  const rooms = [
-    { id: 'ROOM-001', name: 'Salle 101', type: 'Salle de classe', capacity: 30, equipment: ['Tableau', 'Projecteur'], status: 'available' },
-    { id: 'ROOM-002', name: 'Salle 102', type: 'Salle de classe', capacity: 30, equipment: ['Tableau', 'Ordinateur'], status: 'occupied' },
-    { id: 'LAB-001', name: 'Laboratoire SVT', type: 'Laboratoire', capacity: 24, equipment: ['Microscopes', 'Paillasses'], status: 'available' },
-    { id: 'LAB-002', name: 'Laboratoire Physique', type: 'Laboratoire', capacity: 24, equipment: ['Matériel expérimental'], status: 'maintenance' },
-    { id: 'ROOM-003', name: 'Salle informatique', type: 'Salle spécialisée', capacity: 20, equipment: ['Ordinateurs', 'Projecteur'], status: 'available' }
-  ];
-
-  const subjects = [
-    { id: 'SUB-001', name: 'Mathématiques', code: 'MATH', level: 'Secondaire', coefficient: 7 },
-    { id: 'SUB-002', name: 'Français', code: 'FR', level: 'Secondaire', coefficient: 3 },
-    { id: 'SUB-003', name: 'Histoire-Géographie', code: 'HIST-GEO', level: 'Secondaire', coefficient: 2 },
-    { id: 'SUB-004', name: 'Sciences Physiques', code: 'PHYS', level: 'Secondaire', coefficient: 6 },
-    { id: 'SUB-005', name: 'SVT', code: 'SVT', level: 'Secondaire', coefficient: 3 }
-  ];
-
-  const teachers = [
-    { id: 'TCH-001', name: 'M. Dubois', subject: 'Mathématiques', classes: ['6ème A', 'Terminale S'], hoursPerWeek: 18 },
-    { id: 'TCH-002', name: 'Mme Martin', subject: 'Français', classes: ['5ème B', '2nde B'], hoursPerWeek: 15 },
-    { id: 'TCH-003', name: 'M. Laurent', subject: 'Histoire-Géographie', classes: ['4ème A', '1ère C'], hoursPerWeek: 12 }
-  ];
-
-  const schedule = [
-    { id: 1, day: 'Lundi', time: '08:00-09:00', subject: 'Mathématiques', teacher: 'M. Dubois', class: '6ème A', room: 'Salle 101', duration: '1h' },
-    { id: 2, day: 'Lundi', time: '09:00-10:00', subject: 'Français', teacher: 'Mme Martin', class: '5ème B', room: 'Salle 102', duration: '1h' },
-    { id: 3, day: 'Lundi', time: '10:15-11:15', subject: 'Histoire-Géo', teacher: 'M. Laurent', class: '4ème A', room: 'Salle 103', duration: '1h' },
-    { id: 4, day: 'Mardi', time: '08:00-09:00', subject: 'Sciences Physiques', teacher: 'M. Dubois', class: 'Terminale S', room: 'Lab Physique', duration: '1h' },
-    { id: 5, day: 'Mardi', time: '09:00-09:30', subject: 'SVT', teacher: 'Mme Martin', class: '1ère C', room: 'Lab SVT', duration: '30min' },
-    { id: 6, day: 'Mardi', time: '10:15-12:15', subject: 'Mathématiques', teacher: 'M. Dubois', class: 'Terminale S', room: 'Salle 101', duration: '2h' },
-    { id: 7, day: 'Mercredi', time: '08:00-08:45', subject: 'Français', teacher: 'Mme Martin', class: '6ème A', room: 'Salle 102', duration: '45min' },
-    { id: 8, day: 'Mercredi', time: '09:00-10:30', subject: 'Anglais', teacher: 'M. Smith', class: '5ème B', room: 'Salle 103', duration: '1h30min' },
-    { id: 9, day: 'Jeudi', time: '14:00-14:15', subject: 'EPS', teacher: 'M. Durand', class: '6ème A', room: 'Gymnase', duration: '15min' }
-  ];
+  const planningStats = stats;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -241,12 +153,12 @@ const Planning: React.FC = () => {
   };
 
   const handleSaveBreaks = (breaksData: any) => {
-    setBreaks(breaksData);
+    saveBreaks(breaksData);
     console.log('Saving breaks:', breaksData);
   };
 
   const handleSaveWorkHours = (workHoursData: any) => {
-    setWorkHours(workHoursData);
+    saveWorkHours(workHoursData);
     console.log('Saving work hours:', workHoursData);
   };
 
@@ -608,100 +520,56 @@ const Planning: React.FC = () => {
           {activeTab === 'availability' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Gestion des disponibilités</h3>
-                <div className="flex space-x-2">
-                  <button 
-                    onClick={handleTeacherAvailability}
-                    className="inline-flex items-center px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800"
-                  >
-                    <Clock className="w-4 h-4 mr-2" />
-                    Nouvelle disponibilité
-                  </button>
-                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Disponibilités des enseignants</h3>
+                <button 
+                  onClick={handleTeacherAvailability}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nouvelle disponibilité
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Disponibilités des enseignants</h4>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead>
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Enseignant</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Matière</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lundi</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mardi</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mercredi</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jeudi</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendredi</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                          {teachers.map((teacher) => (
-                            <tr key={teacher.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{teacher.name}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{teacher.subject}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">08:00-12:00</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">14:00-18:00</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">08:00-16:00</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Indisponible</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">08:00-12:00</span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-white">
-                    <h4 className="text-lg font-medium mb-2">Statistiques</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Enseignants actifs</span>
-                        <span className="font-bold">{teachers.length}</span>
+              <div className="grid gap-4">
+                {teachers.map((teacher) => (
+                  <div key={teacher.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                          <User className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">{teacher.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{teacher.email}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-500">
+                            {teacher.subjects?.join(', ') || 'Aucune matière assignée'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Heures disponibles</span>
-                        <span className="font-bold">156h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Taux d'occupation</span>
-                        <span className="font-bold">78%</span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedItem(teacher);
+                            setIsEditMode(true);
+                            setIsTeacherAvailabilityModalOpen(true);
+                          }}
+                          className="inline-flex items-center px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Voir disponibilité
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Légende</h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Disponible</span>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Indisponible</span>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Partiel</span>
-                      </div>
-                    </div>
+                ))}
+                
+                {teachers.length === 0 && (
+                  <div className="text-center py-12">
+                    <User className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Aucun enseignant trouvé</h3>
+                    <p className="text-gray-600 dark:text-gray-400">Commencez par ajouter des enseignants pour gérer leurs disponibilités.</p>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -709,87 +577,86 @@ const Planning: React.FC = () => {
           {activeTab === 'work-hours' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Gestion des heures de cours</h3>
-                <div className="flex space-x-2">
-                  <button 
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Configuration des Heures de Cours
+                </h2>
+                <button
+                  onClick={handleConfigureWorkHours}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Modifier les horaires
+                </button>
+              </div>
+
+              {workHours && workHours.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {workHours.map((day: any) => (
+                    <div key={day.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-medium text-gray-900 dark:text-white capitalize">
+                          {day.day}
+                        </h3>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          day.is_work_day 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                        }`}>
+                          {day.is_work_day ? 'Jour travaillé' : 'Jour non travaillé'}
+                        </span>
+                      </div>
+
+                      {day.is_work_day && (
+                        <div className="space-y-2">
+                          <div className="text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Début:</span>
+                            <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              {day.start_time || 'Non défini'}
+                            </span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Fin:</span>
+                            <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                              {day.end_time || 'Non défini'}
+                            </span>
+                          </div>
+                          {day.breaks && day.breaks.length > 0 && (
+                            <div className="text-sm">
+                              <span className="text-gray-600 dark:text-gray-400">Pauses:</span>
+                              <div className="mt-1 space-y-1">
+                                {day.breaks.map((breakItem: any, index: number) => (
+                                  <div key={index} className="text-xs bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
+                                    {breakItem.name}: {breakItem.start_time} - {breakItem.end_time}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    Aucune configuration d'horaires
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Configurez les horaires de cours pour votre établissement
+                  </p>
+                  <button
                     onClick={handleConfigureWorkHours}
-                    className="inline-flex items-center px-4 py-2 bg-orange-600 dark:bg-orange-700 text-white rounded-lg hover:bg-orange-700 dark:hover:bg-orange-800"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Settings className="w-4 h-4 mr-2" />
-                    Configurer horaires
-                  </button>
-                  <button 
-                    onClick={handleNewScheduleEntry}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nouvelle séance
+                    Configurer les horaires
                   </button>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Répartition des heures par classe</h4>
-                    <div className="space-y-4">
-                      {classes.map((cls) => (
-                        <div key={cls.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <h5 className="font-medium text-gray-900 dark:text-gray-100">{cls.name}</h5>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">{cls.students} élèves</span>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Heures planifiées</span>
-                              <span className="font-medium">{Math.floor(Math.random() * 10 + 20)}h/semaine</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div 
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full w-3/4"
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-6 text-white">
-                    <h4 className="text-lg font-medium mb-2">Résumé hebdomadaire</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total heures</span>
-                        <span className="font-bold">890h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Classes actives</span>
-                        <span className="font-bold">{classes.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Moyenne/classe</span>
-                        <span className="font-bold">32h</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Configuration actuelle</h5>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div>Début journée: {workHours.startTime}</div>
-                      <div>Fin journée: {workHours.endTime}</div>
-                      <div>Pause déjeuner: {workHours.lunchBreakStart}-{workHours.lunchBreakEnd}</div>
-                      <div>Durée cours: {workHours.courseDuration}min</div>
-                      <div>Pause entre cours: {workHours.breakBetweenCourses}min</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           )}
-
 
 
           {activeTab === 'journal' && (
