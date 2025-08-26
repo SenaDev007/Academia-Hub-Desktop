@@ -10,12 +10,24 @@ import {
   Save,
   Upload,
   Download,
-  FileText
+  FileText,
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import DocumentSettings from '../settings/DocumentSettings';
+import { storageDashboardService, RealTimeStorageData, RealTimeSyncData, RealTimePerformanceData, FileCategoryData } from '../../services/storageDashboardService';
+import { electronBridge } from '../../services/electronBridge';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('school');
+  
+  // États pour les données en temps réel
+  const [storageData, setStorageData] = useState<RealTimeStorageData | null>(null);
+  const [syncData, setSyncData] = useState<RealTimeSyncData | null>(null);
+  const [performanceData, setPerformanceData] = useState<RealTimePerformanceData | null>(null);
+  const [fileData, setFileData] = useState<FileCategoryData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   const settingsTabs = [
     { id: 'school', label: 'Établissement', icon: School },
@@ -24,9 +36,156 @@ const Settings: React.FC = () => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'billing', label: 'Facturation', icon: CreditCard },
     { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'data', label: 'Données', icon: Database },
+    { id: 'data', label: 'Stockage & Sync', icon: Database },
     { id: 'system', label: 'Système', icon: SettingsIcon }
   ];
+
+  // Fonctions de gestion des données
+  const refreshAllData = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.refreshAllData();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const preloadFrequentData = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.preloadFrequentData();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error preloading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const forceSync = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.forceSync();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error forcing sync:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearCache = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.clearCache();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const preloadData = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.preloadData();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error preloading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeDiskSpace = async () => {
+    setLoading(true);
+    try {
+      const analysis = await storageDashboardService.analyzeDiskSpace();
+      console.log('Disk space analysis:', analysis);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error analyzing disk space:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cleanupOldFiles = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.cleanupOldFiles();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error cleaning up old files:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkIntegrity = async () => {
+    setLoading(true);
+    try {
+      const integrity = await storageDashboardService.checkIntegrity();
+      console.log('Integrity check:', integrity);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error checking integrity:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportMetrics = async () => {
+    setLoading(true);
+    try {
+      const metrics = await storageDashboardService.exportMetrics();
+      console.log('Exported metrics:', metrics);
+      // Ici vous pourriez télécharger le fichier JSON
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error exporting metrics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cleanupLogs = async () => {
+    setLoading(true);
+    try {
+      await storageDashboardService.cleanupLogs();
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error cleaning up logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // useEffect pour les données en temps réel
+  React.useEffect(() => {
+    if (activeTab === 'data') {
+      // S'abonner aux mises à jour en temps réel
+      const unsubscribeStorage = storageDashboardService.onStorageUpdate(setStorageData);
+      const unsubscribeSync = storageDashboardService.onSyncUpdate(setSyncData);
+      const unsubscribePerformance = storageDashboardService.onPerformanceUpdate(setPerformanceData);
+      const unsubscribeFiles = storageDashboardService.onFileUpdate(setFileData);
+
+      // Charger les données initiales
+      refreshAllData();
+
+      // Nettoyer les abonnements
+      return () => {
+        unsubscribeStorage();
+        unsubscribeSync();
+        unsubscribePerformance();
+        unsubscribeFiles();
+      };
+    }
+  }, [activeTab]);
 
   return (
     <div className="space-y-6">
@@ -464,73 +623,398 @@ const Settings: React.FC = () => {
 
             {activeTab === 'data' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">Gestion des données</h2>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Sauvegarde</h3>
-                    
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                          <Database className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-green-900">Dernière sauvegarde</p>
-                          <p className="text-sm text-green-700">Aujourd'hui à 03:00</p>
-                        </div>
-                      </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Gestion du stockage et synchronisation</h2>
+                    <p className="text-gray-600">Surveillez et gérez votre architecture de stockage hybride</p>
+                    <div className="mt-2 flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${electronBridge.isElectronEnvironment() ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                      <span className="text-xs text-gray-500">
+                        {electronBridge.getEnvironmentInfo()}
+                      </span>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Créer une sauvegarde maintenant
-                      </button>
-                      <button className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                        Télécharger la dernière sauvegarde
-                      </button>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button 
+                      onClick={refreshAllData}
+                      disabled={loading}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      {loading ? 'Actualisation...' : 'Actualiser'}
+                    </button>
+                    <button 
+                      onClick={preloadFrequentData}
+                      disabled={loading}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      {loading ? 'Préchargement...' : 'Précharger'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Vue d'ensemble du stockage */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Database className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Base SQLite</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {storageData ? `${(storageData.sqlite.totalSize / (1024 * 1024 * 1024)).toFixed(1)} GB` : '...'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {storageData ? `${storageData.sqlite.totalItems} éléments` : 'Chargement...'}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Import/Export</h3>
-                    
-                    <div className="space-y-2">
-                      <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                        <Upload className="w-4 h-4 inline mr-2" />
-                        Importer des données
-                      </button>
-                      <button className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                        <Download className="w-4 h-4 inline mr-2" />
-                        Exporter toutes les données
-                      </button>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Save className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Cache IndexedDB</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {storageData ? `${(storageData.cache.totalSize / (1024 * 1024)).toFixed(0)} MB` : '...'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {storageData ? `${storageData.cache.totalItems} éléments` : 'Chargement...'}
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="text-sm text-gray-600">
-                      <p>Formats supportés: CSV, Excel, JSON</p>
-                      <p>Conformité RGPD garantie</p>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <FileText className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Fichiers locaux</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {storageData ? `${(storageData.files.totalSize / (1024 * 1024 * 1024)).toFixed(1)} GB` : '...'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {storageData ? `${storageData.files.totalFiles} fichiers` : 'Chargement...'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <Upload className="w-6 h-6 text-orange-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {storageData ? `${(storageData.overall.totalSize / (1024 * 1024 * 1024)).toFixed(1)} GB` : '...'}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          {storageData ? `+${(storageData.overall.compressionRatio * 100).toFixed(0)}% optimisé` : 'Chargement...'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-                  <h3 className="text-lg font-medium text-yellow-900 mb-4">Rétention des données</h3>
-                  <div className="space-y-3">
+                {/* Statut de synchronisation */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-yellow-800">Données élèves archivées</span>
-                      <select className="px-3 py-1 border border-yellow-300 rounded text-sm">
-                        <option>7 ans</option>
-                        <option>10 ans</option>
-                        <option>Permanent</option>
-                      </select>
+                      <h3 className="text-lg font-semibold text-gray-900">Statut de synchronisation</h3>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full animate-pulse ${syncData?.isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className={`text-sm font-medium ${syncData?.isOnline ? 'text-green-600' : 'text-red-600'}`}>
+                          {syncData?.isOnline ? 'En ligne' : 'Hors ligne'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-yellow-800">Logs système</span>
-                      <select className="px-3 py-1 border border-yellow-300 rounded text-sm">
-                        <option>1 an</option>
-                        <option>2 ans</option>
-                        <option>5 ans</option>
-                      </select>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid md:grid-cols-3 gap-6">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <span className="text-2xl font-bold text-blue-600">
+                            {syncData ? syncData.queueStatus.pending : '...'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">En attente</p>
+                        <p className="text-xs text-gray-500">Éléments à synchroniser</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <span className="text-2xl font-bold text-green-600">
+                            {syncData ? syncData.syncStats.completedItems : '...'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">Synchronisés</p>
+                        <p className="text-xs text-gray-500">Aujourd'hui</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <span className="text-2xl font-bold text-red-600">
+                            {syncData ? syncData.queueStatus.failed : '...'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">Échecs</p>
+                        <p className="text-xs text-gray-500">À résoudre</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 flex justify-center space-x-3">
+                      <button 
+                        onClick={forceSync}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Synchronisation...' : 'Forcer la synchronisation'}
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          const queue = await storageDashboardService.getSyncQueue();
+                          console.log('Sync queue:', queue);
+                        }}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Voir la queue
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance du cache */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="p-6 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Performance du cache</h3>
+                  </div>
+                  <div className="p-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Taux de réussite</span>
+                            <span className="font-medium text-gray-900">
+                              {performanceData ? `${performanceData.cacheHitRate.toFixed(1)}%` : '...'}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-500 h-2 rounded-full" 
+                              style={{ width: `${performanceData ? performanceData.cacheHitRate : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Temps de réponse</span>
+                            <span className="font-medium text-gray-900">
+                              {performanceData ? `${performanceData.responseTime.toFixed(0)}ms` : '...'}
+                            </span>
+                        </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-500 h-2 rounded-full" 
+                              style={{ width: `${performanceData ? (performanceData.responseTime / 60) * 100 : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Espace utilisé</span>
+                            <span className="font-medium text-gray-900">
+                              {performanceData ? `${(performanceData.spaceUsage / (1024 * 1024)).toFixed(0)} MB / ${(performanceData.maxSpace / (1024 * 1024)).toFixed(0)} MB` : '...'}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-500 h-2 rounded-full" 
+                              style={{ width: `${performanceData ? (performanceData.spaceUsage / performanceData.maxSpace) * 100 : 0}%` }}
+                            ></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900">Stratégies de cache</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm text-gray-700">Fréquent</span>
+                            <span className="text-sm font-medium text-green-600">
+                              {performanceData ? `${performanceData.strategies.frequent.count} éléments` : '...'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm text-gray-700">Normal</span>
+                            <span className="text-sm font-medium text-blue-600">
+                              {performanceData ? `${performanceData.strategies.normal.count} éléments` : '...'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm text-gray-700">Rare</span>
+                            <span className="text-sm font-medium text-orange-600">
+                              {performanceData ? `${performanceData.strategies.rare.count} éléments` : '...'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 flex justify-center space-x-3">
+                      <button 
+                        onClick={clearCache}
+                        disabled={loading}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Nettoyage...' : 'Nettoyer le cache'}
+                      </button>
+                      <button 
+                        onClick={preloadData}
+                        disabled={loading}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Préchargement...' : 'Précharger les données'}
+                      </button>
+                    </div>
+                    </div>
+                  </div>
+
+                {/* Gestion des fichiers */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="p-6 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Gestion des fichiers</h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900">Répartition par catégorie</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                              <span className="text-sm text-gray-700">Photos d'élèves</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {fileData ? `${(fileData.studentPhotos.size / (1024 * 1024 * 1024)).toFixed(1)} GB` : '...'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-4 h-4 bg-green-500 rounded"></div>
+                              <span className="text-sm text-gray-700">Documents</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {fileData ? `${(fileData.documents.size / (1024 * 1024 * 1024)).toFixed(1)} GB` : '...'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                              <span className="text-sm text-gray-700">Rapports</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {fileData ? `${(fileData.reports.size / (1024 * 1024 * 1024)).toFixed(1)} GB` : '...'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900">Statistiques d'optimisation</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                            <span className="text-sm text-gray-700">Photos optimisées</span>
+                            <span className="text-sm font-medium text-blue-600">
+                              {fileData ? `${fileData.studentPhotos.optimized}/${fileData.studentPhotos.count}` : '...'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                            <span className="text-sm text-gray-700">Documents compressés</span>
+                            <span className="text-sm font-medium text-green-600">
+                              {fileData ? `${fileData.documents.compressed}/${fileData.documents.count}` : '...'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                            <span className="text-sm text-gray-700">Rapports archivés</span>
+                            <span className="text-sm font-medium text-purple-600">
+                              {fileData ? `${fileData.reports.archived}/${fileData.reports.count}` : '...'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 flex justify-center space-x-3">
+                      <button 
+                        onClick={analyzeDiskSpace}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Analyse...' : 'Analyser l\'espace'}
+                      </button>
+                      <button 
+                        onClick={cleanupOldFiles}
+                        disabled={loading}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Nettoyage...' : 'Nettoyer les anciens'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions de maintenance */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                  <h3 className="text-lg font-medium text-yellow-900 mb-4">Actions de maintenance</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                      <button 
+                        onClick={checkIntegrity}
+                        disabled={loading}
+                        className="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Database className="w-4 h-4 inline mr-2" />
+                        {loading ? 'Vérification...' : 'Vérifier l\'intégrité'}
+                      </button>
+                      <button 
+                        onClick={exportMetrics}
+                        disabled={loading}
+                        className="w-full px-4 py-2 border border-yellow-300 text-yellow-700 rounded-lg hover:bg-yellow-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Download className="w-4 h-4 inline mr-2" />
+                        {loading ? 'Export...' : 'Exporter les métriques'}
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      <button 
+                        onClick={cleanupLogs}
+                        disabled={loading}
+                        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-4 h-4 inline mr-2" />
+                        {loading ? 'Nettoyage...' : 'Nettoyer les logs'}
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          const settings = await storageDashboardService.getAdvancedSettings();
+                          console.log('Advanced settings:', settings);
+                        }}
+                        className="w-full px-4 py-2 border border-yellow-300 text-yellow-700 rounded-lg hover:bg-yellow-50 transition-colors"
+                      >
+                        <SettingsIcon className="w-4 h-4 inline mr-2" />
+                        Paramètres avancés
+                      </button>
                     </div>
                   </div>
                 </div>
